@@ -1,0 +1,7 @@
+# Alembic Database Migrations
+
+Thư mục chứa các script migration quản lý lược đồ cơ sở dữ liệu cho SourceCheck AI.
+
+- `env.py`: Script cấu hình môi trường Alembic (kết nối database, metadata models).
+- `script.py.mako`: Template tạo file migration mới.
+- `versions/`: Thư mục lưu trữ từng revision file migration.
