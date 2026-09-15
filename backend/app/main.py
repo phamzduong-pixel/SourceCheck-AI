@@ -12,6 +12,8 @@ from app.api.routers import (
     questions_router,
     verification_router,
     auth_router,
+    conversations_router,
+    dashboard_router,
 )
 
 
@@ -54,6 +56,8 @@ app.include_router(search_router, prefix=settings.API_V1_PREFIX)
 app.include_router(questions_router, prefix=settings.API_V1_PREFIX)
 app.include_router(verification_router, prefix=settings.API_V1_PREFIX)
 app.include_router(auth_router, prefix=settings.API_V1_PREFIX)
+app.include_router(conversations_router, prefix=settings.API_V1_PREFIX)
+app.include_router(dashboard_router, prefix=settings.API_V1_PREFIX)
 
 
 if __name__ == "__main__":

@@ -92,18 +92,53 @@ class RetrievalService:
             raise ValueError(f"Unsupported search mode: {search_mode}. Supported: vector, bm25, hybrid")
 
         # Second-stage: Cross-Encoder Reranking
+        rerank_applied = False
         if rerank and hits:
             hits = await self.reranking_service.rerank(
                 query=query,
                 candidates=hits,
                 top_k=top_k,
             )
+            rerank_applied = True
+
+        # Assign explicit ranking numbers (1-based) and extract sub-scores
+        final_hits = []
+        for rank_idx, hit in enumerate(hits[:top_k], start=1):
+            hit_meta = hit.metadata or {}
+            hit.rank = rank_idx
+
+            if "vector_rank" in hit_meta:
+                hit.vector_rank = hit_meta.get("vector_rank")
+            if "vector_raw_score" in hit_meta:
+                hit.vector_score = hit_meta.get("vector_raw_score")
+            elif mode == "vector":
+                hit.vector_score = hit.score
+
+            if "bm25_rank" in hit_meta:
+                hit.bm25_rank = hit_meta.get("bm25_rank")
+            if "bm25_raw_score" in hit_meta:
+                hit.bm25_score = hit_meta.get("bm25_raw_score")
+            elif mode == "bm25":
+                hit.bm25_score = hit.score
+
+            if "rrf_score" in hit_meta:
+                hit.rrf_score = hit_meta.get("rrf_score")
+            elif mode == "hybrid" and not rerank_applied:
+                hit.rrf_score = hit.score
+
+            if "rerank_score" in hit_meta:
+                hit.rerank_score = hit_meta.get("rerank_score")
+            elif rerank_applied:
+                hit.rerank_score = hit.score
+
+            final_hits.append(hit)
 
         return SearchResponse(
             query=query,
-            search_type=f"{mode}_reranked" if rerank else mode,
+            search_type=f"{mode}_reranked" if rerank_applied else mode,
             total_hits=len(hits),
-            hits=hits[:top_k],
+            rerank_applied=rerank_applied,
+            hits=final_hits,
         )
 
     def assemble_evidence_context(self, hits: List[SearchHit]) -> str:

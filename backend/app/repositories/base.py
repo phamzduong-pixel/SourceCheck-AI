@@ -38,3 +38,18 @@ class BaseRepository(Generic[ModelType]):
             self.session.add(instance)
             await self.session.flush()
         return instance
+
+    async def delete(self, instance: ModelType) -> None:
+        """Delete an existing model instance."""
+        if self.session:
+            await self.session.delete(instance)
+            await self.session.flush()
+
+    async def count(self) -> int:
+        """Count total records in table."""
+        if not self.session:
+            return 0
+        from sqlalchemy import func
+        stmt = select(func.count()).select_from(self.model)
+        result = await self.session.execute(stmt)
+        return int(result.scalar_one() or 0)

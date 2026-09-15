@@ -1,0 +1,253 @@
+/**
+ * i18n Dictionary Type Definitions for SourceCheck AI.
+ */
+
+export type UILanguage = 'vi' | 'en';
+
+export interface TranslationDictionary {
+  // Navigation & Brand
+  'brand.name': string;
+  'brand.tagline': string;
+  'nav.overview': string;
+  'nav.dashboard': string;
+  'nav.newChat': string;
+  'nav.history': string;
+  'nav.noHistory': string;
+  'nav.tools': string;
+  'nav.qa': string;
+  'nav.factCheck': string;
+  'nav.knowledgeBase': string;
+  'nav.documents': string;
+  'nav.search': string;
+  'nav.version': string;
+
+  // System Status
+  'status.ready': string;
+  'status.degraded': string;
+  'status.offline': string;
+  'status.checking': string;
+  'status.systemHealth': string;
+
+  // User Profile & Account Menu
+  'user.demoUser': string;
+  'user.accountSettings': string;
+  'user.role': string;
+  'user.signOut': string;
+  'user.uiLanguage': string;
+  'user.aiResponseLanguage': string;
+  'user.theme': string;
+  'user.themeLight': string;
+  'user.themeDark': string;
+
+  // Dashboard Page
+  'dashboard.heroBadge': string;
+  'dashboard.heroTitle': string;
+  'dashboard.heroDescription': string;
+  'dashboard.refresh': string;
+  'dashboard.refreshing': string;
+  'dashboard.summaryTitle': string;
+  'dashboard.totalDocuments': string;
+  'dashboard.totalChunks': string;
+  'dashboard.totalQuestions': string;
+  'dashboard.totalConversations': string;
+  'dashboard.totalVerifications': string;
+  'dashboard.totalClaims': string;
+  'dashboard.verificationBreakdownTitle': string;
+  'dashboard.verificationBreakdownDesc': string;
+  'dashboard.supported': string;
+  'dashboard.partiallySupported': string;
+  'dashboard.refuted': string;
+  'dashboard.notEnoughInfo': string;
+  'dashboard.recentActivityTitle': string;
+  'dashboard.recentActivityDesc': string;
+  'dashboard.noActivity': string;
+  'dashboard.evaluationTitle': string;
+  'dashboard.quickActionsTitle': string;
+  'dashboard.errorTitle': string;
+  'dashboard.retry': string;
+  'dashboard.emptyNotice': string;
+  'dashboard.cardQaTitle': string;
+  'dashboard.cardQaDesc': string;
+  'dashboard.cardQaAction': string;
+  'dashboard.cardFactCheckTitle': string;
+  'dashboard.cardFactCheckDesc': string;
+  'dashboard.cardFactCheckAction': string;
+  'dashboard.cardDocTitle': string;
+  'dashboard.cardDocDesc': string;
+  'dashboard.cardDocAction': string;
+  'dashboard.cardSearchTitle': string;
+  'dashboard.cardSearchDesc': string;
+  'dashboard.cardSearchAction': string;
+
+  // Grounded Q&A Page
+  'qa.pageTitle': string;
+  'qa.pageDescription': string;
+  'qa.composerPlaceholder': string;
+  'qa.composerAskBtn': string;
+  'qa.composerAskingBtn': string;
+  'qa.composerHint': string;
+  'qa.emptyTitle': string;
+  'qa.emptyDescription': string;
+  'qa.loadingTitle': string;
+  'qa.errorTitle': string;
+  'qa.errorClose': string;
+  'qa.answerTitle': string;
+  'qa.confidenceScore': string;
+  'qa.evidenceCoverage': string;
+  'qa.claimsSectionTitle': string;
+  'qa.supportedClaims': string;
+  'qa.refutedClaims': string;
+  'qa.neutralClaims': string;
+  'qa.unverifiedClaims': string;
+  'qa.evidenceDrawerTitle': string;
+  'qa.evidenceRelevance': string;
+  'qa.evidenceSource': string;
+  'qa.evidencePage': string;
+  'qa.evidenceClose': string;
+
+  // Fact-Checking Page
+  'fc.pageTitle': string;
+  'fc.pageDescription': string;
+  'fc.tabVerify': string;
+  'fc.tabExtract': string;
+  'fc.verifyComposerPlaceholder': string;
+  'fc.verifyBtn': string;
+  'fc.verifyingBtn': string;
+  'fc.verifyEmptyTitle': string;
+  'fc.verifyEmptyDesc': string;
+  'fc.extractComposerPlaceholder': string;
+  'fc.extractBtn': string;
+  'fc.extractingBtn': string;
+  'fc.extractEmptyTitle': string;
+  'fc.extractEmptyDesc': string;
+  'fc.extractResultsTitle': string;
+  'fc.extractVerifiable': string;
+  'fc.extractUnverifiable': string;
+  'fc.extractVerifyThisClaim': string;
+  'fc.verdictSupported': string;
+  'fc.verdictRefuted': string;
+  'fc.verdictConflicting': string;
+  'fc.verdictUnverified': string;
+  'fc.verdictInconclusive': string;
+  'fc.summaryTitle': string;
+  'fc.evidenceTitle': string;
+
+  // Module Placeholders
+  'placeholder.moduleBadge': string;
+  'placeholder.comingSoon': string;
+  'placeholder.docTitle': string;
+  'placeholder.docDesc': string;
+  'placeholder.searchTitle': string;
+  'placeholder.searchDesc': string;
+
+  // Common Controls
+  'common.close': string;
+  'common.cancel': string;
+  'common.copy': string;
+  'common.copied': string;
+  'common.loading': string;
+  'common.error': string;
+  'common.success': string;
+
+  // Shared UI / page-specific controls
+  'common.retry': string;
+  'common.dismiss': string;
+  'common.closeDetails': string;
+  'common.actions': string;
+  'common.refresh': string;
+  'common.search': string;
+  'common.searching': string;
+  'common.page': string;
+  'common.of': string;
+  'common.total': string;
+  'common.document': string;
+  'common.source': string;
+  'common.noTitle': string;
+  'search.title': string;
+  'search.description': string;
+  'search.placeholder': string;
+  'search.submit': string;
+  'search.loading': string;
+  'search.suggestions': string;
+  'search.initialTitle': string;
+  'search.initialDescription': string;
+  'search.noResultsTitle': string;
+  'search.noResultsDescription': string;
+  'search.resultsSummary': string;
+  'search.technicalDetails': string;
+  'search.detailsTitle': string;
+  'search.query': string;
+  'search.pipeline': string;
+  'search.notAvailable': string;
+  'search.finalRank': string;
+  'search.chunkPassage': string;
+  'search.sourceInfo': string;
+  'search.metadata': string;
+  'documents.title': string;
+  'documents.description': string;
+  'documents.refresh': string;
+  'documents.upload': string;
+  'documents.loading': string;
+  'documents.loadingDetails': string;
+  'documents.emptyTitle': string;
+  'documents.emptyDescription': string;
+  'documents.uploadFirst': string;
+  'documents.pageSummary': string;
+  'auth.welcome': string;
+  'auth.loginSubtitle': string;
+  'auth.email': string;
+  'auth.password': string;
+  'auth.signIn': string;
+  'auth.signingIn': string;
+  'auth.or': string;
+  'auth.noAccount': string;
+  'auth.createAccount': string;
+  'auth.showPassword': string;
+  'auth.hidePassword': string;
+  'auth.invalidEmail': string;
+  'auth.passwordRequired': string;
+  'auth.googleError': string;
+  'auth.loginError': string;
+  'ui.themeLightTitle': string;
+  'ui.themeDarkTitle': string;
+  'ui.uiLanguageLabel': string;
+  'ui.aiLanguageLabel': string;
+
+  'auth.continueGoogle': string;
+  'auth.connectingGoogle': string;
+
+  'auth.createTitle': string;
+  'auth.registerSubtitle': string;
+  'auth.confirmPassword': string;
+  'auth.creatingAccount': string;
+  'auth.alreadyAccount': string;
+
+  // Research Chat (FE-CHAT-01)
+  'chat.title': string;
+  'chat.welcomeTitle': string;
+  'chat.welcomeSubtitle': string;
+  'chat.composerPlaceholder': string;
+  'chat.sendBtn': string;
+  'chat.sendingBtn': string;
+  'chat.composerHint': string;
+  'chat.startersTitle': string;
+  'chat.userLabel': string;
+  'chat.aiLabel': string;
+  'chat.newChatBtn': string;
+  'chat.resetTooltip': string;
+  'chat.historyTitle': string;
+  'chat.noHistory': string;
+  'chat.followUpPlaceholder': string;
+  'chat.emptyFollowUpNotice': string;
+  'chat.rename': string;
+  'chat.pin': string;
+  'chat.unpin': string;
+  'chat.delete': string;
+  'chat.deleteConfirmTitle': string;
+  'chat.deleteConfirmMessage': string;
+  'chat.deleteConfirmBtn': string;
+  'chat.deleteCancelBtn': string;
+  'chat.deleteError': string;
+}
+
+export type TranslationKey = keyof TranslationDictionary;

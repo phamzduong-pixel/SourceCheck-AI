@@ -5,12 +5,14 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useAIPreferences } from '../hooks/useAIPreferences';
 import { GoogleButton } from '../components/auth/GoogleButton';
 import { EyeIcon } from '../components/auth/EyeIcon';
 import { authService } from '../services/auth';
 import '../styles/auth.css';
 
 export const LoginPage: React.FC = () => {
+  const { t } = useAIPreferences();
   const { login, error: authError, clearError } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -75,8 +77,8 @@ export const LoginPage: React.FC = () => {
           <div className="auth-brand">
             <span>SourceCheck AI</span>
           </div>
-          <h1 className="auth-title">Welcome back</h1>
-          <p className="auth-subtitle">Nhập thông tin tài khoản để tiếp tục</p>
+<h1 className="auth-title">{t('auth.welcome')}</h1>
+<p className="auth-subtitle">{t('auth.loginSubtitle')}</p>
         </div>
 
         {displayError && (
@@ -87,9 +89,7 @@ export const LoginPage: React.FC = () => {
 
         <form className="auth-form" onSubmit={handleSubmit} noValidate>
           <div className="form-group">
-            <label className="form-label" htmlFor="email-input">
-              Email
-            </label>
+<label className="form-label" htmlFor="email-input">{t('auth.email')}</label>
             <input
               id="email-input"
               type="email"
@@ -104,9 +104,7 @@ export const LoginPage: React.FC = () => {
           </div>
 
           <div className="form-group">
-            <label className="form-label" htmlFor="password-input">
-              Password
-            </label>
+<label className="form-label" htmlFor="password-input">{t('auth.password')}</label>
             <div className="form-input-wrapper">
               <input
                 id="password-input"
@@ -123,7 +121,7 @@ export const LoginPage: React.FC = () => {
                 type="button"
                 className="password-toggle-btn"
                 onClick={() => setShowPassword(!showPassword)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
               >
                 <EyeIcon visible={showPassword} />
               </button>
@@ -138,16 +136,16 @@ export const LoginPage: React.FC = () => {
             {isSubmitting ? (
               <>
                 <span className="spinner" />
-                <span>Signing in...</span>
+<span>{t('auth.signingIn')}</span>
               </>
             ) : (
-              'Sign in'
+              t('auth.signIn')
             )}
           </button>
         </form>
 
         <div className="auth-divider">
-          <span>or</span>
+<span>{t('auth.or')}</span>
         </div>
 
         <GoogleButton
@@ -157,9 +155,9 @@ export const LoginPage: React.FC = () => {
         />
 
         <div className="auth-footer">
-          <span>Don't have an account?</span>
+<span>{t('auth.noAccount')}</span>
           <Link to="/register" className="auth-link">
-            Create account
+            {t('auth.createAccount')}
           </Link>
         </div>
       </div>

@@ -1,0 +1,574 @@
+[
+  {
+    "id": "case_01",
+    "category": "grounded_qa",
+    "query": "Tăng trưởng GDP của Việt Nam năm 2023 đạt bao nhiêu phần trăm theo số liệu chính thức?",
+    "claim_text": "Tăng trưởng GDP cả nước năm 2023 ước đạt 5.05% theo Tổng cục Thống kê.",
+    "context_chunks": [
+      {
+        "chunk_id": "chunk_gdp_2023",
+        "document_id": "doc_gso_2023",
+        "source_title": "Báo cáo Tình hình Kinh tế Xã hội 2023 - GSO",
+        "source_url": "https://gso.gov.vn/kinh-te-2023",
+        "content": "Theo Tổng cục Thống kê, tổng sản phẩm trong nước (GDP) năm 2023 của Việt Nam ước tính tăng 5.05% so với năm trước.",
+        "is_relevant": true
+      },
+      {
+        "chunk_id": "chunk_inflation_2023",
+        "document_id": "doc_gso_2023",
+        "source_title": "Báo cáo Tình hình Kinh tế Xã hội 2023 - GSO",
+        "source_url": "https://gso.gov.vn/kinh-te-2023",
+        "content": "Chỉ số giá tiêu dùng CPI bình quân năm 2023 tăng 3.25% so với năm 2022, đạt mục tiêu Quốc hội đề ra.",
+        "is_relevant": false
+      }
+    ],
+    "ground_truth": {
+      "expected_intent": null,
+      "expected_verdict": "SUPPORTED",
+      "expected_pipeline_status": "SUCCESS",
+      "relevant_chunk_ids": ["chunk_gdp_2023"],
+      "has_contradiction": false,
+      "expected_keywords": ["5.05%", "GDP", "2023"]
+    }
+  },
+  {
+    "id": "case_02",
+    "category": "grounded_qa",
+    "query": "Tổng kim ngạch xuất nhập khẩu hàng hóa của Việt Nam năm 2023 đạt khoảng bao nhiêu?",
+    "claim_text": "Tổng kim ngạch xuất nhập khẩu hàng hóa năm 2023 đạt 683 tỷ USD.",
+    "context_chunks": [
+      {
+        "chunk_id": "chunk_trade_2023",
+        "document_id": "doc_trade_2023",
+        "source_title": "Báo cáo Ngoại thương Việt Nam 2023",
+        "source_url": "https://customs.gov.vn/trade-2023",
+        "content": "Tổng kim ngạch xuất nhập khẩu hàng hóa năm 2023 của Việt Nam đạt 683 tỷ USD, cán cân thương mại xuất siêu 28 tỷ USD.",
+        "is_relevant": true
+      }
+    ],
+    "ground_truth": {
+      "expected_intent": null,
+      "expected_verdict": "SUPPORTED",
+      "expected_pipeline_status": "SUCCESS",
+      "relevant_chunk_ids": ["chunk_trade_2023"],
+      "has_contradiction": false,
+      "expected_keywords": ["683", "xuất nhập khẩu", "28 tỷ USD"]
+    }
+  },
+  {
+    "id": "case_03",
+    "category": "grounded_qa",
+    "query": "Thuật toán Reciprocal Rank Fusion (RRF) trong SourceCheck AI kết hợp những phương pháp tìm kiếm nào?",
+    "claim_text": "RRF kết hợp xếp hạng từ Dense Vector Search và Sparse BM25 Keyword Search.",
+    "context_chunks": [
+      {
+        "chunk_id": "chunk_rrf_arch",
+        "document_id": "doc_arch_sourcecheck",
+        "source_title": "Kiến trúc Kỹ thuật SourceCheck AI",
+        "source_url": "https://sourcecheck.ai/docs/architecture",
+        "content": "SourceCheck AI tích hợp Hybrid Retrieval kết hợp kết quả tìm kiếm ngữ nghĩa Dense Vector (pgvector) và BM25 thông qua thuật toán Reciprocal Rank Fusion (RRF).",
+        "is_relevant": true
+      }
+    ],
+    "ground_truth": {
+      "expected_intent": null,
+      "expected_verdict": "SUPPORTED",
+      "expected_pipeline_status": "SUCCESS",
+      "relevant_chunk_ids": ["chunk_rrf_arch"],
+      "has_contradiction": false,
+      "expected_keywords": ["Dense Vector", "BM25", "RRF"]
+    }
+  },
+  {
+    "id": "case_04",
+    "category": "grounded_qa",
+    "query": "Mục đích chính của tầng Cross-Encoder Reranker trong đường ống RAG là gì?",
+    "claim_text": "Cross-Encoder Reranker tính điểm tương đồng ngữ nghĩa sâu giữa câu hỏi và từng chunk văn bản.",
+    "context_chunks": [
+      {
+        "chunk_id": "chunk_reranker_desc",
+        "document_id": "doc_arch_sourcecheck",
+        "source_title": "Kiến trúc Kỹ thuật SourceCheck AI",
+        "source_url": "https://sourcecheck.ai/docs/architecture",
+        "content": "Tầng Cross-Encoder Reranker nhận top candidates từ bước Hybrid Search và tính toán tương quan ngữ nghĩa sâu câu hỏi - văn bản nhằm loại bỏ các đoạn gây nhiễu.",
+        "is_relevant": true
+      }
+    ],
+    "ground_truth": {
+      "expected_intent": null,
+      "expected_verdict": "SUPPORTED",
+      "expected_pipeline_status": "SUCCESS",
+      "relevant_chunk_ids": ["chunk_reranker_desc"],
+      "has_contradiction": false,
+      "expected_keywords": ["Cross-Encoder", "Reranker", "ngữ nghĩa"]
+    }
+  },
+  {
+    "id": "case_05",
+    "category": "grounded_qa",
+    "query": "Cơ chế Claim Extraction trong SourceCheck AI thực hiện nhiệm vụ gì?",
+    "claim_text": "Claim Extraction phân rã câu trả lời thành các nhận định nguyên tử độc lập để kiểm chứng.",
+    "context_chunks": [
+      {
+        "chunk_id": "chunk_claim_extractor",
+        "document_id": "doc_arch_sourcecheck",
+        "source_title": "Kiến trúc Kỹ thuật SourceCheck AI",
+        "source_url": "https://sourcecheck.ai/docs/architecture",
+        "content": "Module Claim Extraction tách câu trả lời tổng hợp thành các atomic claims độc lập nhằm phục vụ đối soát stance và phát hiện mâu thuẫn chéo.",
+        "is_relevant": true
+      }
+    ],
+    "ground_truth": {
+      "expected_intent": null,
+      "expected_verdict": "SUPPORTED",
+      "expected_pipeline_status": "SUCCESS",
+      "relevant_chunk_ids": ["chunk_claim_extractor"],
+      "has_contradiction": false,
+      "expected_keywords": ["Claim Extraction", "atomic claims", "kiểm chứng"]
+    }
+  },
+  {
+    "id": "case_06",
+    "category": "grounded_qa",
+    "query": "Đô thị nào giữ vai trò trung tâm kinh tế lớn nhất khu vực phía Nam Việt Nam?",
+    "claim_text": "Thành phố Hồ Chí Minh là trung tâm kinh tế, tài chính và thương mại lớn nhất phía Nam.",
+    "context_chunks": [
+      {
+        "chunk_id": "chunk_hcmc_econ",
+        "document_id": "doc_geography_vn",
+        "source_title": "Địa lý Kinh tế Việt Nam",
+        "source_url": "https://vietnam.gov.vn/geography",
+        "content": "Thành phố Hồ Chí Minh là đô thị đặc biệt, là trung tâm kinh tế, tài chính, khoa học công nghệ đầu tàu của cả nước và phía Nam.",
+        "is_relevant": true
+      }
+    ],
+    "ground_truth": {
+      "expected_intent": null,
+      "expected_verdict": "SUPPORTED",
+      "expected_pipeline_status": "SUCCESS",
+      "relevant_chunk_ids": ["chunk_hcmc_econ"],
+      "has_contradiction": false,
+      "expected_keywords": ["Thành phố Hồ Chí Minh", "kinh tế", "đầu tàu"]
+    }
+  },
+  {
+    "id": "case_07",
+    "category": "insufficient_evidence",
+    "query": "Tỷ lệ lạm phát dự kiến của cộng đồng dân cư trên sao Hỏa vào năm 2099 là bao nhiêu phần trăm?",
+    "claim_text": "Lạm phát sao Hỏa năm 2099 đạt mức 4.5% theo ngân hàng liên hành tinh.",
+    "context_chunks": [],
+    "ground_truth": {
+      "expected_intent": null,
+      "expected_verdict": "NOT_ENOUGH_INFO",
+      "expected_pipeline_status": "INSUFFICIENT_EVIDENCE",
+      "relevant_chunk_ids": [],
+      "has_contradiction": false,
+      "expected_keywords": []
+    }
+  },
+  {
+    "id": "case_08",
+    "category": "insufficient_evidence",
+    "query": "Ai là người chế tạo thành công cỗ máy du hành thời gian lượng tử vào thế kỷ 22?",
+    "claim_text": "Cỗ máy du hành thời gian lượng tử được phát minh bởi tiến sĩ Chronos vào năm 2150.",
+    "context_chunks": [],
+    "ground_truth": {
+      "expected_intent": null,
+      "expected_verdict": "NOT_ENOUGH_INFO",
+      "expected_pipeline_status": "INSUFFICIENT_EVIDENCE",
+      "relevant_chunk_ids": [],
+      "has_contradiction": false,
+      "expected_keywords": []
+    }
+  },
+  {
+    "id": "case_09",
+    "category": "insufficient_evidence",
+    "query": "Mật mã khóa két sắt bảo mật tuyệt mật của tập đoàn XYZ trong tài liệu nội bộ chưa công bố là gì?",
+    "claim_text": "Mật mã két sắt tuyệt mật của XYZ là Alpha-999.",
+    "context_chunks": [],
+    "ground_truth": {
+      "expected_intent": null,
+      "expected_verdict": "NOT_ENOUGH_INFO",
+      "expected_pipeline_status": "INSUFFICIENT_EVIDENCE",
+      "relevant_chunk_ids": [],
+      "has_contradiction": false,
+      "expected_keywords": []
+    }
+  },
+  {
+    "id": "case_10",
+    "category": "insufficient_evidence",
+    "query": "Công thức hóa học bí truyền điều chế đá vô cực từ không khí loãng là gì?",
+    "claim_text": "Đá vô cực được điều chế bằng phản ứng dung hợp không khí với tinh thể ma thuật.",
+    "context_chunks": [],
+    "ground_truth": {
+      "expected_intent": null,
+      "expected_verdict": "NOT_ENOUGH_INFO",
+      "expected_pipeline_status": "INSUFFICIENT_EVIDENCE",
+      "relevant_chunk_ids": [],
+      "has_contradiction": false,
+      "expected_keywords": []
+    }
+  },
+  {
+    "id": "case_11",
+    "category": "insufficient_evidence",
+    "query": "Số liệu doanh thu quý 4 năm 2035 của công ty cổ phần Mặt Trời Đỏ là bao nhiêu tỷ đồng?",
+    "claim_text": "Doanh thu quý 4 năm 2035 của công ty Mặt Trời Đỏ đạt 500 tỷ đồng.",
+    "context_chunks": [],
+    "ground_truth": {
+      "expected_intent": null,
+      "expected_verdict": "NOT_ENOUGH_INFO",
+      "expected_pipeline_status": "INSUFFICIENT_EVIDENCE",
+      "relevant_chunk_ids": [],
+      "has_contradiction": false,
+      "expected_keywords": []
+    }
+  },
+  {
+    "id": "case_12",
+    "category": "contradiction",
+    "query": "Tăng trưởng GDP của Việt Nam năm 2023 có phải đạt 12.5% vượt mọi kỷ lục lịch sử?",
+    "claim_text": "Tăng trưởng GDP Việt Nam năm 2023 đạt 12.5% vượt kỷ lục.",
+    "context_chunks": [
+      {
+        "chunk_id": "chunk_gdp_actual",
+        "document_id": "doc_gso_2023",
+        "source_title": "Báo cáo Tổng cục Thống kê 2023",
+        "source_url": "https://gso.gov.vn/kinh-te-2023",
+        "content": "Tăng trưởng GDP cả năm 2023 của Việt Nam đạt 5.05%, thấp hơn mục tiêu 6.5% và hoàn toàn không đạt 12.5%.",
+        "is_relevant": true
+      }
+    ],
+    "ground_truth": {
+      "expected_intent": null,
+      "expected_verdict": "REFUTED",
+      "expected_pipeline_status": "SUCCESS",
+      "relevant_chunk_ids": ["chunk_gdp_actual"],
+      "has_contradiction": true,
+      "expected_keywords": ["5.05%", "không đạt"]
+    }
+  },
+  {
+    "id": "case_13",
+    "category": "contradiction",
+    "query": "Có đúng là dự án thành lập vào năm 2026?",
+    "claim_text": "Dự án SourceCheck AI được thành lập chính thức vào năm 2026.",
+    "context_chunks": [
+      {
+        "chunk_id": "chunk_founding_date",
+        "document_id": "doc_company_info",
+        "source_title": "Hồ sơ Dự án SourceCheck AI",
+        "source_url": "https://sourcecheck.ai/about",
+        "content": "Dự án SourceCheck AI được thành lập và khởi động nghiên cứu vào năm 2024.",
+        "is_relevant": true
+      }
+    ],
+    "ground_truth": {
+      "expected_intent": null,
+      "expected_verdict": "REFUTED",
+      "expected_pipeline_status": "SUCCESS",
+      "relevant_chunk_ids": ["chunk_founding_date"],
+      "has_contradiction": true,
+      "expected_keywords": ["2024", "2026"]
+    }
+  },
+  {
+    "id": "case_14",
+    "category": "contradiction",
+    "query": "Việt Nam năm 2023 bị thâm hụt cán cân thương mại và nhập siêu 50 tỷ USD có đúng không?",
+    "claim_text": "Việt Nam nhập siêu 50 tỷ USD trong năm 2023.",
+    "context_chunks": [
+      {
+        "chunk_id": "chunk_trade_surplus",
+        "document_id": "doc_trade_2023",
+        "source_title": "Báo cáo Hải quan 2023",
+        "source_url": "https://customs.gov.vn/trade-2023",
+        "content": "Cán cân thương mại hàng hóa năm 2023 của Việt Nam tiếp tục ghi nhận xuất siêu kỷ lục 28 tỷ USD, không có chuyện nhập siêu.",
+        "is_relevant": true
+      }
+    ],
+    "ground_truth": {
+      "expected_intent": null,
+      "expected_verdict": "REFUTED",
+      "expected_pipeline_status": "SUCCESS",
+      "relevant_chunk_ids": ["chunk_trade_surplus"],
+      "has_contradiction": true,
+      "expected_keywords": ["xuất siêu", "28 tỷ USD"]
+    }
+  },
+  {
+    "id": "case_15",
+    "category": "contradiction",
+    "query": "Vệ tinh viễn thông Vinasat của Việt Nam được phóng lên quỹ đạo vào năm 2035 có phải không?",
+    "claim_text": "Vệ tinh viễn thông Vinasat được phóng lên quỹ đạo vào năm 2035.",
+    "context_chunks": [
+      {
+        "chunk_id": "chunk_vinasat",
+        "document_id": "doc_tech_vn",
+        "source_title": "Lịch sử Công nghệ Viễn thông Việt Nam",
+        "source_url": "https://mic.gov.vn/vinasat-1",
+        "content": "Vệ tinh viễn thông Vinasat được phóng thành công lên quỹ đạo địa tĩnh vào năm 2008 từ bãi phóng Kourou.",
+        "is_relevant": true
+      }
+    ],
+    "ground_truth": {
+      "expected_intent": null,
+      "expected_verdict": "REFUTED",
+      "expected_pipeline_status": "SUCCESS",
+      "relevant_chunk_ids": ["chunk_vinasat"],
+      "has_contradiction": true,
+      "expected_keywords": ["2008", "phóng"]
+    }
+  },
+  {
+    "id": "case_16",
+    "category": "contradiction",
+    "query": "Doanh thu kiểm toán chính thức của công ty đạt 100 tỷ đồng có đúng không?",
+    "claim_text": "Doanh thu kiểm toán chính thức của công ty đạt 100 tỷ đồng.",
+    "context_chunks": [
+      {
+        "chunk_id": "chunk_report_audit",
+        "document_id": "doc_audit_2023",
+        "source_title": "Báo cáo Kiểm toán Độc lập",
+        "source_url": "https://audit.vn/rep-2023",
+        "content": "Theo số liệu kiểm toán độc lập chính thức, doanh thu thực tế được xác nhận chỉ đạt 60 tỷ đồng.",
+        "is_relevant": true
+      }
+    ],
+    "ground_truth": {
+      "expected_intent": null,
+      "expected_verdict": "REFUTED",
+      "expected_pipeline_status": "SUCCESS",
+      "relevant_chunk_ids": ["chunk_report_audit"],
+      "has_contradiction": true,
+      "expected_keywords": ["60 tỷ đồng", "kiểm toán"]
+    }
+  },
+  {
+    "id": "case_17",
+    "category": "fact_check",
+    "query": "Hà Nội là thủ đô của nước Cộng hòa Xã hội Chủ nghĩa Việt Nam.",
+    "claim_text": "Hà Nội là thủ đô của nước Cộng hòa Xã hội Chủ nghĩa Việt Nam.",
+    "context_chunks": [
+      {
+        "chunk_id": "chunk_hanoi_capital",
+        "document_id": "doc_constitution_vn",
+        "source_title": "Hiến pháp Việt Nam",
+        "source_url": "https://chinhphu.vn/hien-phap",
+        "content": "Thủ đô của nước Cộng hòa Xã hội Chủ nghĩa Việt Nam là Hà Nội.",
+        "is_relevant": true
+      }
+    ],
+    "ground_truth": {
+      "expected_intent": null,
+      "expected_verdict": "SUPPORTED",
+      "expected_pipeline_status": "SUCCESS",
+      "relevant_chunk_ids": ["chunk_hanoi_capital"],
+      "has_contradiction": false,
+      "expected_keywords": ["Hà Nội", "thủ đô"]
+    }
+  },
+  {
+    "id": "case_18",
+    "category": "fact_check",
+    "query": "Việt Nam chính thức gia nhập ASEAN vào năm 1995 và trở thành cường quốc kinh tế số một thế giới.",
+    "claim_text": "Việt Nam gia nhập ASEAN vào năm 1995 và là cường quốc kinh tế số một toàn cầu.",
+    "context_chunks": [
+      {
+        "chunk_id": "chunk_asean_1995",
+        "document_id": "doc_foreign_affairs",
+        "source_title": "Lịch sử Ngoại giao Việt Nam",
+        "source_url": "https://mofa.gov.vn/asean-1995",
+        "content": "Việt Nam chính thức trở thành thành viên thứ 7 của Hiệp hội các quốc gia Đông Nam Á (ASEAN) vào ngày 28/7/1995.",
+        "is_relevant": false
+      }
+    ],
+    "ground_truth": {
+      "expected_intent": null,
+      "expected_verdict": "PARTIALLY_SUPPORTED",
+      "expected_pipeline_status": "SUCCESS",
+      "relevant_chunk_ids": ["chunk_asean_1995"],
+      "has_contradiction": false,
+      "expected_keywords": ["1995", "ASEAN"]
+    }
+  },
+  {
+    "id": "case_19",
+    "category": "fact_check",
+    "query": "Nhiệt độ sôi của nước tinh khiết là 50 độ C.",
+    "claim_text": "Nhiệt độ sôi của nước tinh khiết là 50 độ C.",
+    "context_chunks": [
+      {
+        "chunk_id": "chunk_water_boiling",
+        "document_id": "doc_physics_basic",
+        "source_title": "Vật lý Đại cương",
+        "source_url": "https://edu.vn/physics",
+        "content": "Điểm sôi tiêu chuẩn của nước tinh khiết là 100 độ C.",
+        "is_relevant": true
+      }
+    ],
+    "ground_truth": {
+      "expected_intent": null,
+      "expected_verdict": "REFUTED",
+      "expected_pipeline_status": "SUCCESS",
+      "relevant_chunk_ids": ["chunk_water_boiling"],
+      "has_contradiction": false,
+      "expected_keywords": ["100 độ C"]
+    }
+  },
+  {
+    "id": "case_20",
+    "category": "fact_check",
+    "query": "Nhà thám hiểm cổ đại đã phát hiện thành phố vàng El Dorado tại vùng núi Fansipan vào năm 1500.",
+    "claim_text": "Thành phố vàng El Dorado được phát hiện tại đỉnh Fansipan năm 1500.",
+    "context_chunks": [],
+    "ground_truth": {
+      "expected_intent": null,
+      "expected_verdict": "NOT_ENOUGH_INFO",
+      "expected_pipeline_status": "INSUFFICIENT_EVIDENCE",
+      "relevant_chunk_ids": [],
+      "has_contradiction": false,
+      "expected_keywords": []
+    }
+  },
+  {
+    "id": "case_21",
+    "category": "fact_check",
+    "query": "Ngân hàng Nhà nước Việt Nam giữ vai trò ngân hàng trung ương và quản lý tiền tệ quốc gia.",
+    "claim_text": "Ngân hàng Nhà nước Việt Nam là cơ quan ngang bộ, thực hiện chức năng ngân hàng trung ương.",
+    "context_chunks": [
+      {
+        "chunk_id": "chunk_sbv_role",
+        "document_id": "doc_banking_law",
+        "source_title": "Luật Ngân hàng Nhà nước Việt Nam",
+        "source_url": "https://sbv.gov.vn/luat-nhnn",
+        "content": "Ngân hàng Nhà nước Việt Nam là cơ quan ngang bộ của Chính phủ, là ngân hàng trung ương của nước Cộng hòa Xã hội Chủ nghĩa Việt Nam.",
+        "is_relevant": true
+      }
+    ],
+    "ground_truth": {
+      "expected_intent": null,
+      "expected_verdict": "SUPPORTED",
+      "expected_pipeline_status": "SUCCESS",
+      "relevant_chunk_ids": ["chunk_sbv_role"],
+      "has_contradiction": false,
+      "expected_keywords": ["Ngân hàng Nhà nước", "ngân hàng trung ương"]
+    }
+  },
+  {
+    "id": "case_22",
+    "category": "fact_check",
+    "query": "Tổng vốn FDI thực hiện tại Việt Nam đạt 1000 tỷ USD.",
+    "claim_text": "Tổng vốn FDI thực hiện tại Việt Nam đạt 1000 tỷ USD.",
+    "context_chunks": [
+      {
+        "chunk_id": "chunk_fdi_2022",
+        "document_id": "doc_mpi_2022",
+        "source_title": "Báo cáo Đầu tư Nước ngoài 2022 - Bộ Kế hoạch & Đầu tư",
+        "source_url": "https://mpi.gov.vn/fdi-2022",
+        "content": "Vốn đầu tư trực tiếp nước ngoài FDI thực hiện tại Việt Nam ước đạt 22.4 tỷ USD.",
+        "is_relevant": true
+      }
+    ],
+    "ground_truth": {
+      "expected_intent": null,
+      "expected_verdict": "REFUTED",
+      "expected_pipeline_status": "SUCCESS",
+      "relevant_chunk_ids": ["chunk_fdi_2022"],
+      "has_contradiction": false,
+      "expected_keywords": ["22.4 tỷ USD", "FDI"]
+    }
+  },
+  {
+    "id": "case_23",
+    "category": "intent_routing",
+    "query": "Xin chào bạn",
+    "claim_text": "",
+    "context_chunks": [],
+    "ground_truth": {
+      "expected_intent": "GREETING",
+      "expected_verdict": null,
+      "expected_pipeline_status": "CANNED_RESPONSE",
+      "relevant_chunk_ids": [],
+      "has_contradiction": false,
+      "expected_keywords": ["Xin chào", "SourceCheck AI"]
+    }
+  },
+  {
+    "id": "case_24",
+    "category": "intent_routing",
+    "query": "hi there",
+    "claim_text": "",
+    "context_chunks": [],
+    "ground_truth": {
+      "expected_intent": "GREETING",
+      "expected_verdict": null,
+      "expected_pipeline_status": "CANNED_RESPONSE",
+      "relevant_chunk_ids": [],
+      "has_contradiction": false,
+      "expected_keywords": ["Xin chào", "SourceCheck AI"]
+    }
+  },
+  {
+    "id": "case_25",
+    "category": "intent_routing",
+    "query": "bạn là ai",
+    "claim_text": "",
+    "context_chunks": [],
+    "ground_truth": {
+      "expected_intent": "IDENTITY",
+      "expected_verdict": null,
+      "expected_pipeline_status": "CANNED_RESPONSE",
+      "relevant_chunk_ids": [],
+      "has_contradiction": false,
+      "expected_keywords": ["Tôi là SourceCheck AI", "Hybrid Search"]
+    }
+  },
+  {
+    "id": "case_26",
+    "category": "intent_routing",
+    "query": "SourceCheck AI là gì",
+    "claim_text": "",
+    "context_chunks": [],
+    "ground_truth": {
+      "expected_intent": "IDENTITY",
+      "expected_verdict": null,
+      "expected_pipeline_status": "CANNED_RESPONSE",
+      "relevant_chunk_ids": [],
+      "has_contradiction": false,
+      "expected_keywords": ["SourceCheck AI", "đối soát sự thật"]
+    }
+  },
+  {
+    "id": "case_27",
+    "category": "intent_routing",
+    "query": "cảm ơn bạn rất nhiều",
+    "claim_text": "",
+    "context_chunks": [],
+    "ground_truth": {
+      "expected_intent": "SMALLTALK",
+      "expected_verdict": null,
+      "expected_pipeline_status": "CANNED_RESPONSE",
+      "relevant_chunk_ids": [],
+      "has_contradiction": false,
+      "expected_keywords": ["Rất vui", "hỗ trợ"]
+    }
+  },
+  {
+    "id": "case_28",
+    "category": "intent_routing",
+    "query": "tạm biệt bạn nhé",
+    "claim_text": "",
+    "context_chunks": [],
+    "ground_truth": {
+      "expected_intent": "SMALLTALK",
+      "expected_verdict": null,
+      "expected_pipeline_status": "CANNED_RESPONSE",
+      "relevant_chunk_ids": [],
+      "has_contradiction": false,
+      "expected_keywords": ["Tạm biệt", "hẹn gặp lại"]
+    }
+  }
+]

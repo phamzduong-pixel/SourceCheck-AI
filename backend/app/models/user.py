@@ -29,3 +29,7 @@ class User(Base, UUIDMixin, TimestampMixin):
     questions: Mapped[List["Question"]] = relationship(
         "Question", back_populates="user", cascade="all, delete-orphan"
     )
+    conversations: Mapped[List["Conversation"]] = relationship(
+        "Conversation", back_populates="user", cascade="all, delete-orphan"
+    )
+

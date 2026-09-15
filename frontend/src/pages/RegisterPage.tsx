@@ -5,12 +5,14 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useAIPreferences } from '../hooks/useAIPreferences';
 import { GoogleButton } from '../components/auth/GoogleButton';
 import { EyeIcon } from '../components/auth/EyeIcon';
 import { authService } from '../services/auth';
 import '../styles/auth.css';
 
 export const RegisterPage: React.FC = () => {
+  const { t } = useAIPreferences();
   const { register, login, error: authError, clearError } = useAuth();
   const navigate = useNavigate();
 
@@ -92,7 +94,7 @@ export const RegisterPage: React.FC = () => {
           <div className="auth-brand">
             <span>SourceCheck AI</span>
           </div>
-          <h1 className="auth-title">Create your account</h1>
+          <h1 className="auth-title">{t('auth.createTitle')}</h1>
           <p className="auth-subtitle">Đăng ký để sử dụng nền tảng kiểm chứng</p>
         </div>
 
@@ -105,7 +107,7 @@ export const RegisterPage: React.FC = () => {
         <form className="auth-form" onSubmit={handleSubmit} noValidate>
           <div className="form-group">
             <label className="form-label" htmlFor="register-email">
-              Email
+              {t('auth.email')}
             </label>
             <input
               id="register-email"
@@ -122,7 +124,7 @@ export const RegisterPage: React.FC = () => {
 
           <div className="form-group">
             <label className="form-label" htmlFor="register-password">
-              Password
+              {t('auth.password')}
             </label>
             <div className="form-input-wrapper">
               <input
@@ -140,7 +142,7 @@ export const RegisterPage: React.FC = () => {
                 type="button"
                 className="password-toggle-btn"
                 onClick={() => setShowPassword(!showPassword)}
-                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                aria-label={showPassword ? t('auth.hidePassword') : t('auth.showPassword')}
               >
                 <EyeIcon visible={showPassword} />
               </button>
@@ -149,7 +151,7 @@ export const RegisterPage: React.FC = () => {
 
           <div className="form-group">
             <label className="form-label" htmlFor="register-confirm-password">
-              Confirm password
+              {t('auth.confirmPassword')}
             </label>
             <div className="form-input-wrapper">
               <input
@@ -167,7 +169,7 @@ export const RegisterPage: React.FC = () => {
                 type="button"
                 className="password-toggle-btn"
                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                aria-label={showConfirmPassword ? 'Hide password' : 'Show password'}
+                aria-label={showConfirmPassword ? t('auth.hidePassword') : t('auth.showPassword')}
               >
                 <EyeIcon visible={showConfirmPassword} />
               </button>
@@ -182,16 +184,16 @@ export const RegisterPage: React.FC = () => {
             {isSubmitting ? (
               <>
                 <span className="spinner" />
-                <span>Creating account...</span>
+                <span>{t('auth.creatingAccount')}</span>
               </>
             ) : (
-              'Create account'
+              t('auth.createAccount')
             )}
           </button>
         </form>
 
         <div className="auth-divider">
-          <span>or</span>
+          <span>{t('auth.or')}</span>
         </div>
 
         <GoogleButton
@@ -201,7 +203,7 @@ export const RegisterPage: React.FC = () => {
         />
 
         <div className="auth-footer">
-          <span>Already have an account?</span>
+          <span>{t('auth.alreadyAccount')}</span>
           <Link to="/login" className="auth-link">
             Sign in
           </Link>

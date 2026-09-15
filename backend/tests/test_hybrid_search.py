@@ -339,5 +339,41 @@ def test_api_hybrid_and_bm25_endpoints(async_session: AsyncSession, seeded_corpu
         assert r_mode_vec.status_code == 200
         assert r_mode_vec.json()["data"]["search_type"] == "vector"
 
+        # 5. POST /api/v1/search with rerank=True and ranking inspection
+        r_rerank = client.post(
+            f"{settings.API_V1_PREFIX}/search?rerank=true",
+            json={"query": "Nghị định 15/2020/NĐ-CP", "top_k": 3},
+        )
+        assert r_rerank.status_code == 200
+        data_rerank = r_rerank.json()["data"]
+        assert data_rerank["search_type"] == "hybrid_reranked"
+        assert data_rerank["rerank_applied"] is True
+        assert len(data_rerank["hits"]) >= 1
+
+        top_hit = data_rerank["hits"][0]
+        assert top_hit["rank"] == 1
+        assert top_hit["chunk_id"] is not None
+        assert top_hit["content"] is not None
+        assert top_hit["score"] > 0
+        assert top_hit["rerank_score"] is not None
+        assert "source_title" in top_hit
+
+        # 6. POST /api/v1/search with non-matching query (empty hits)
+        r_no_match = client.post(
+            f"{settings.API_V1_PREFIX}/search",
+            json={"query": "khủng long kỷ Phấn Trắng", "top_k": 5, "mode": "bm25"},
+        )
+        assert r_no_match.status_code == 200
+        assert r_no_match.json()["data"]["total_hits"] == 0
+        assert r_no_match.json()["data"]["hits"] == []
+
+        # 7. POST /api/v1/search with invalid request (empty query string) -> 422 Unprocessable Entity
+        r_invalid = client.post(
+            f"{settings.API_V1_PREFIX}/search",
+            json={"query": "", "top_k": 5},
+        )
+        assert r_invalid.status_code == 422
+
     finally:
         app.dependency_overrides.clear()
+

@@ -25,6 +25,21 @@ from app.schemas.auth import (
     GoogleUserInfo,
     GoogleLoginResponse,
 )
+from app.schemas.conversation import (
+    MessageRole,
+    MessageCreate,
+    MessageRead,
+    ConversationCreate,
+    ConversationRead,
+    ConversationSummary,
+)
+
+from app.schemas.dashboard import (
+    VerificationDistribution,
+    RecentActivityItem,
+    EvaluationSummary,
+    DashboardStatsResponse,
+)
 
 __all__ = [
     "APIResponse",
@@ -53,4 +68,15 @@ __all__ = [
     "TokenPayload",
     "GoogleUserInfo",
     "GoogleLoginResponse",
+    "MessageRole",
+    "MessageCreate",
+    "MessageRead",
+    "ConversationCreate",
+    "ConversationRead",
+    "ConversationSummary",
+    "VerificationDistribution",
+    "RecentActivityItem",
+    "EvaluationSummary",
+    "DashboardStatsResponse",
 ]
+

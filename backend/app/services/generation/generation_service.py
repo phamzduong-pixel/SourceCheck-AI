@@ -32,6 +32,7 @@ class GenerationService:
         context: Optional[StructuredContext] = None,
         temperature: float = settings.LLM_TEMPERATURE,
         max_tokens: Optional[int] = settings.LLM_MAX_OUTPUT_TOKENS,
+        conversation_history: Optional[str] = None,
     ) -> GenerationResponse:
         """Generate a structured answer strictly grounded in the provided evidence context.
         
@@ -40,6 +41,7 @@ class GenerationService:
             context: StructuredContext containing selected evidence items and context text.
             temperature: Sampling temperature (default 0.0 for strict determinism).
             max_tokens: Maximum tokens in generated completion.
+            conversation_history: Optional formatted dialogue context from prior turns.
             
         Returns:
             GenerationResponse with validated GeneratedAnswer and metadata.
@@ -69,6 +71,7 @@ class GenerationService:
         user_prompt = render_grounded_qa_prompt(
             question=question,
             evidence_context=context.context_text,
+            conversation_history=conversation_history,
         )
 
         # Collect valid evidence IDs to verify grounding

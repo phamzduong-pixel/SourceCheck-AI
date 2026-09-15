@@ -30,6 +30,7 @@ class QAService:
         session: Optional[AsyncSession] = None,
         persist_db: bool = True,
         metadata: Optional[Dict[str, Any]] = None,
+        conversation_history: Optional[str] = None,
     ) -> FinalAnswerResponse:
         """Execute the end-to-end Q&A pipeline safely and optionally persist records."""
         try:
@@ -40,6 +41,7 @@ class QAService:
                 search_mode=search_mode,
                 session=session,
                 metadata=metadata,
+                conversation_history=conversation_history,
             )
 
             # 2. Persist to relational DB for traceability if session is provided and response is not blocked

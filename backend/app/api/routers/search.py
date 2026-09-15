@@ -14,22 +14,25 @@ router = APIRouter(prefix="/search", tags=["Search"])
 @router.post(
     "",
     response_model=APIResponse[SearchResponse],
-    summary="Unified Search endpoint supporting mode=hybrid|vector|bm25",
+    summary="Unified Search endpoint supporting mode=hybrid|vector|bm25 with optional Cross-Encoder reranking",
 )
 async def search_endpoint(
     request: SearchQueryRequest,
     mode: str = Query(default=None, description="Search mode: hybrid, vector, or bm25"),
+    rerank: bool = Query(default=None, description="Apply Cross-Encoder reranking"),
     retrieval_service: RetrievalService = Depends(get_retrieval_service),
     db: AsyncSession = Depends(get_db),
 ):
-    """Retrieve relevant passages using requested search mode (defaults to hybrid)."""
+    """Retrieve relevant passages using requested search mode (defaults to hybrid) and optional reranking."""
     try:
         selected_mode = mode or request.mode or "hybrid"
+        should_rerank = rerank if rerank is not None else (request.rerank or False)
         response = await retrieval_service.search(
             query=request.query,
             top_k=request.top_k,
             search_mode=selected_mode,
             score_threshold=request.score_threshold,
+            rerank=should_rerank,
             filters=request.filters,
             session=db,
         )
@@ -49,19 +52,23 @@ async def search_endpoint(
 @router.post(
     "/hybrid",
     response_model=APIResponse[SearchResponse],
-    summary="Execute Hybrid (Dense Vector + Sparse BM25 via RRF) search",
+    summary="Execute Hybrid (Dense Vector + Sparse BM25 via RRF) search with optional Cross-Encoder reranking",
 )
 async def hybrid_search(
     request: SearchQueryRequest,
+    rerank: bool = Query(default=None, description="Apply Cross-Encoder reranking"),
     retrieval_service: RetrievalService = Depends(get_retrieval_service),
     db: AsyncSession = Depends(get_db),
 ):
     """Retrieve relevant passages using hybrid search with Reciprocal Rank Fusion."""
     try:
+        should_rerank = rerank if rerank is not None else (request.rerank or False)
         response = await retrieval_service.search(
             query=request.query,
             top_k=request.top_k,
             search_mode="hybrid",
+            score_threshold=request.score_threshold,
+            rerank=should_rerank,
             filters=request.filters,
             session=db,
         )
@@ -85,11 +92,13 @@ async def vector_search(
 ):
     """Retrieve relevant passages using dense vector embeddings in PostgreSQL."""
     try:
+        should_rerank = request.rerank or False
         response = await retrieval_service.search(
             query=request.query,
             top_k=request.top_k,
             search_mode="vector",
             score_threshold=request.score_threshold,
+            rerank=should_rerank,
             filters=request.filters,
             session=db,
         )
@@ -113,10 +122,12 @@ async def bm25_search(
 ):
     """Retrieve relevant passages using sparse BM25 keyword matching."""
     try:
+        should_rerank = request.rerank or False
         response = await retrieval_service.search(
             query=request.query,
             top_k=request.top_k,
             search_mode="bm25",
+            rerank=should_rerank,
             filters=request.filters,
             session=db,
         )

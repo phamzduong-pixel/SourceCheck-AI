@@ -4,8 +4,9 @@ import json
 import math
 from typing import List, Optional, Tuple
 from uuid import UUID
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 from app.models.document import Document, DocumentChunk
 from app.models.source import Source
 from app.repositories.base import BaseRepository
@@ -16,6 +17,45 @@ class DocumentRepository(BaseRepository[Document]):
 
     def __init__(self, session: Optional[AsyncSession] = None):
         super().__init__(Document, session)
+
+    async def get_with_chunks(self, doc_id: UUID) -> Optional[Document]:
+        """Fetch document by primary key UUID eagerly loading its chunks sorted by chunk_index."""
+        if not self.session:
+            return None
+        stmt = (
+            select(Document)
+            .where(Document.id == doc_id)
+            .options(selectinload(Document.chunks))
+        )
+        res = await self.session.execute(stmt)
+        doc = res.scalar_one_or_none()
+        if doc and doc.chunks:
+            doc.chunks.sort(key=lambda c: c.chunk_index)
+        return doc
+
+    async def list_with_chunk_count(
+        self, skip: int = 0, limit: int = 50
+    ) -> List[Tuple[Document, int]]:
+        """List documents ordered by created_at DESC with aggregate chunk counts."""
+        if not self.session:
+            return []
+        stmt = (
+            select(
+                Document,
+                func.count(DocumentChunk.id).label("chunk_count"),
+            )
+            .outerjoin(DocumentChunk, Document.id == DocumentChunk.document_id)
+            .group_by(Document.id)
+            .order_by(Document.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+        )
+        res = await self.session.execute(stmt)
+        return [(row[0], int(row[1])) for row in res.all()]
+
+    async def count_documents(self) -> int:
+        """Count total documents in database."""
+        return await self.count()
 
     async def get_by_url(self, source_url: str) -> Optional[Document]:
         """Fetch document by source URL if exists."""

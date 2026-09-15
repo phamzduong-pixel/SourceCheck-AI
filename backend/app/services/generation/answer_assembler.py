@@ -166,3 +166,33 @@ class AnswerAssembler:
             },
             metadata=meta,
         )
+
+    @classmethod
+    def create_canned_response(
+        cls,
+        question: str,
+        answer: str,
+        intent: str = "GREETING",
+        metadata: Optional[Dict[str, Any]] = None,
+    ) -> FinalAnswerResponse:
+        """Create a direct canned response for conversational intents (Greeting, Identity, Smalltalk)."""
+        meta = metadata or {}
+        meta["intent"] = intent
+        meta["pipeline_stage"] = "intent_router"
+
+        return FinalAnswerResponse(
+            question=question,
+            answer=answer,
+            status=FinalAnswerStatus.SUPPORTED,
+            claims=[],
+            evidence=[],
+            citations=[],
+            evidence_coverage=1.0,
+            verification_summary={
+                "SUPPORTED": 0,
+                "PARTIALLY_SUPPORTED": 0,
+                "REFUTED": 0,
+                "NOT_ENOUGH_INFO": 0,
+            },
+            metadata=meta,
+        )

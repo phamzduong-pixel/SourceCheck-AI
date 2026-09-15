@@ -24,8 +24,10 @@ Tài liệu đặc tả toàn bộ danh mục tính năng của hệ thống Sou
   - `LoginPage.tsx` & `RegisterPage.tsx`: Thiết kế phong cách Glassmorphism mờ cao cấp (`backdrop-filter: blur(24px)`), ô nhập bán trong suốt, nút con mắt SVG (`EyeIcon.tsx`) bật/tắt mật khẩu.
   - `GoogleButton.tsx`: Nút đăng nhập Google với logo SVG 4 màu và spinner trạng thái.
   - `OAuthCallbackPage.tsx`: Nhận redirect từ Google (`/auth/callback`), tự động đổi mã lấy token và chuyển hướng tới Authenticated Workspace (`/`).
+  - `AppLayout.tsx`, `Sidebar.tsx`, `Header.tsx`: Khung ứng dụng hoàn chỉnh, hỗ trợ Light & Dark Mode, menu người dùng floating popup, chuyển đổi độc lập ngôn ngữ UI (vi/en) và ngôn ngữ AI (vi/en).
+  - `ResearchChatPage.tsx` & `chat.css`: Giao diện Main Research Chat phong cách Graylight/ChatGPT tối giản, hỗ trợ multi-turn follow-up với conversation context, câu hỏi nối tiếp (với conversation_id), hiển thị trạng thái loading, xử lý `INSUFFICIENT_EVIDENCE` mượt mà và trích dẫn/bằng chứng độc lập theo từng lượt.
+  - Custom Scrollbar: Thanh cuộn hiện đại toàn hệ thống (`16px`, `#888888` thumb, `#555555` hover, `border-radius: 10px`, nền trong suốt) bám sát lề phải màn hình.
   - `vite.config.ts`: Cấu hình Reverse Proxy chuyển tiếp `/api` sang FastAPI backend (Port 8000).
-- **Ghi chú**: Đã hoàn thành Full-Stack Authentication (Backend + Frontend). Chưa thiết kế Chat UI (dành cho prompt tiếp theo).
 
 ---
 
@@ -44,71 +46,98 @@ Tài liệu đặc tả toàn bộ danh mục tính năng của hệ thống Sou
 
 ---
 
-## 3. Nhóm chức năng Quản lý Tài liệu (Document Management)
+## 3. Nhóm chức năng Quản lý Tài liệu Tri thức (Document Knowledge Base — FE-04.5A & BE-04.5B)
 
-### 3.1. Tiếp nhận & Tải lên tài liệu (Document Ingestion)
-- **Mục đích**: Đưa tài liệu mới vào kho tri thức phục vụ làm cơ sở đối soát.
-- **Input**: Văn bản thuần, tệp tài liệu (PDF, Word, TXT) hoặc URL bài báo điện tử.
-- **Output**: Bản ghi Document kèm danh sách các DocumentChunks đã được phân tách và lập chỉ mục.
+### 3.1. Tiếp nhận & Tải lên tài liệu (Document Ingestion & Parsing)
+- **Mục đích**: Nạp tài liệu tri thức mới (PDF, DOCX, TXT) vào kho tri thức làm nguồn đối chứng thẩm định.
+- **Input**: Tệp tài liệu định dạng `.pdf`, `.docx`, `.txt` (kèm xác thực MIME type và kích thước).
+- **Output**: Bản ghi `Document` trong CSDL kèm danh sách `DocumentChunk` đã qua làm sạch và chunking.
 - **Actor**: Nhà nghiên cứu, Quản trị viên.
 - **Luồng chính**:
-  1. Người dùng tải tệp hoặc nhập liên kết trang web.
-  2. Hệ thống đọc và trích xuất nội dung văn bản thuần.
-  3. Thực hiện phân đoạn (chunking) theo kích thước và ngữ cảnh định trước.
-  4. Lưu trữ thông tin tài liệu vào CSDL và đồng bộ vector chunks vào Vector Store.
-- **Ghi chú**: Tự động lọc quảng cáo, thẻ HTML dư thừa đối với các nguồn dạng URL.
+  1. Người dùng mở `DocumentUploadModal.tsx` tại giao diện `/documents`, chọn file và bấm Upload.
+  2. Backend nhận file qua API `POST /api/v1/documents/upload`.
+  3. `IngestionService` tự động nhận diện định dạng, chạy parser tương ứng (`PdfParser`, `DocxParser`, `TxtParser`).
+  4. `TextCleaner` chuẩn hóa Unicode NFKC và loại bỏ ký tự điều khiển.
+  5. `MetadataExtractor` tính mã băm SHA-256, đếm số trang, số từ, kích thước byte.
+  6. `SentenceSplitter` phân đoạn và lưu trữ vào CSDL kèm cập nhật vector embeddings.
 
-### 3.2. Quản lý & Xem chi tiết tài liệu (Document Inspection)
-- **Mục đích**: Cho phép xem lại nội dung gốc và danh sách các đoạn trích (chunks) đã được bóc tách từ tài liệu.
-- **Input**: Mã định danh tài liệu (`document_id`).
-- **Output**: Chi tiết thông tin tệp, ngày tạo, nhà xuất bản, các chunks kèm chỉ số vector.
-- **Actor**: Quản trị viên, Người dùng.
-- **Luồng chính**: Người dùng duyệt danh sách tài liệu và nhấn xem chi tiết.
-- **Ghi chú**: Hỗ trợ xoá tài liệu khi nguồn tin bị đính chính hoặc không còn hợp lệ.
-
----
-
-## 4. Nhóm chức năng Tìm kiếm (Search)
-
-### 4.1. Tìm kiếm theo Từ khóa (Lexical BM25 Search)
-- **Mục đích**: Tìm các đoạn tài liệu chứa chính xác các thực thể, thuật ngữ, tên riêng hoặc số liệu cụ thể.
-- **Input**: Chuỗi truy vấn từ khóa, số lượng kết quả (`top_k`).
-- **Output**: Danh sách các đoạn văn bản khớp từ khóa kèm điểm số BM25.
-- **Actor**: Hệ thống (gọi tự động) hoặc Người dùng (tra cứu trực tiếp).
-- **Luồng chính**: Hệ thống truy vấn chỉ mục đảo (inverted index) và trả về các kết quả có tần suất từ khóa cao.
-- **Ghi chú**: Tối ưu cho các trường hợp kiểm chứng sự kiện có ngày tháng hoặc tên người.
-
-### 4.2. Tìm kiếm theo Ngữ nghĩa (Dense Vector Search)
-- **Mục đích**: Tìm các tài liệu có ý nghĩa tương tự dù không trùng lặp hoàn toàn mặt chữ.
-- **Input**: Câu hỏi hoặc câu khẳng định, số lượng kết quả (`top_k`).
-- **Output**: Danh sách các đoạn văn bản có độ tương đồng cosine/dot-product cao nhất.
-- **Actor**: Hệ thống.
-- **Luồng chính**: Chuyển đổi truy vấn thành embedding vector và tìm kiếm k láng giềng gần nhất (ANN) trên Vector Store.
-- **Ghi chú**: Xử lý tốt các trường hợp người dùng diễn đạt bằng từ đồng nghĩa hoặc câu văn dài.
-
-### 4.3. Tìm kiếm Lai (Hybrid Search Fusion)
-- **Mục đích**: Kết hợp sức mạnh của cả tìm kiếm từ khóa và tìm kiếm ngữ nghĩa để đạt độ phủ bằng chứng tối đa.
-- **Input**: Truy vấn tìm kiếm, trọng số điều chỉnh (dense vs sparse weight).
-- **Output**: Danh sách kết quả hợp nhất được xếp hạng lại bằng thuật toán Reciprocal Rank Fusion (RRF).
-- **Actor**: Hệ thống.
-- **Luồng chính**: Chạy song song Dense Search và BM25 Search, sau đó kết hợp danh sách xếp hạng.
-- **Ghi chú**: Đây là phương pháp tìm kiếm chủ đạo được sử dụng trong toàn bộ pipeline đối soát.
+### 3.2. Quản lý, Xem chi tiết Chunks & Xóa tài liệu (Document Life-cycle)
+- **Mục đích**: Xem danh sách tài liệu thật từ backend, kiểm tra các chunks văn bản và xóa tài liệu khi cần.
+- **Input**: `document_id`.
+- **Output**: Thông tin chi tiết tài liệu và danh sách chunks trong `DocumentDetailDrawer.tsx`.
+- **API Endpoints**:
+  - `GET /api/v1/documents`: Liệt kê tài liệu.
+  - `GET /api/v1/documents/{document_id}`: Lấy chi tiết tài liệu kèm chunks.
+  - `DELETE /api/v1/documents/{document_id}`: Xóa tài liệu và toàn bộ chunks liên quan.
+- **Frontend UI**: `DocumentsPage.tsx`, hỗ trợ Search/Filter, Refresh, Empty/Loading/Error state, và hộp thoại xác nhận xóa an toàn.
 
 ---
 
-## 5. Nhóm chức năng Hỏi đáp Ngữ cảnh (Question Answering)
+## 4. Nhóm chức năng Tìm kiếm & Khám phá Truy xuất (Search & Retrieval Explorer — FE-04.6B & BE-04.6A)
 
-### 5.1. Hỏi đáp có đối soát dữ liệu (Grounded Q&A)
-- **Mục đích**: Trả lời các câu hỏi mở của người dùng dựa trên cơ sở tài liệu sẵn có, tránh việc mô hình tự bịa đặt.
-- **Input**: Câu hỏi của người dùng.
-- **Output**: Câu trả lời tổng hợp kèm theo danh sách trích dẫn nguồn căn cứ.
-- **Actor**: Người dùng cuối.
-- **Luồng chính**:
-  1. Tiếp nhận câu hỏi và truy xuất các đoạn tài liệu liên quan nhất.
-  2. Xây dựng ngữ cảnh (context building) từ các đoạn tìm được.
-  3. Điều phối LLM sinh câu trả lời bám sát nghiêm ngặt ngữ cảnh.
-  4. Trả về câu trả lời kèm các thẻ nguồn trích dẫn.
-- **Ghi chú**: Nếu tài liệu không chứa câu trả lời, hệ thống thông báo rõ ràng không đủ thông tin thay vì suy đoán.
+### 4.1. Khám phá Truy xuất Độc lập (Search / Retrieval Explorer — `/search`)
+- **Mục đích**: Cho phép người dùng trực tiếp kiểm tra và quan sát pipeline retrieval của hệ thống một cách minh bạch.
+- **Input**: Câu truy vấn tìm kiếm độc lập, chế độ tìm kiếm (`hybrid`, `vector`, `bm25`), `top_k`.
+- **Output**: Danh sách kết quả retrieval kèm phân rã chi tiết điểm số và thứ hạng.
+- **API Endpoint**: `POST /api/v1/search`.
+- **Frontend UI**: `SearchExplorerPage.tsx` và `RetrievalDetailsDrawer.tsx`.
+
+### 4.2. Phân rã Điểm số & Thứ hạng Minh bạch (Score & Rank Inspection)
+- **Thông tin hiển thị cho từng chunk kết quả**:
+  - `Final Rank` & `Content` trích đoạn văn bản.
+  - `Dense Vector Rank` (Thứ hạng tìm kiếm ngữ nghĩa).
+  - `BM25 Rank` (Thứ hạng tìm kiếm từ khóa/thực thể).
+  - `RRF Score` (Điểm số hợp nhất Reciprocal Rank Fusion với $k=60$).
+  - `Reranker Score` (Điểm tương quan ngữ cảnh sâu từ Cross-Encoder `bge-reranker-base`).
+  - Metadata: Tên tài liệu, trang, tác giả, ngày nạp.
+- **Ngăn trượt chi tiết (`RetrievalDetailsDrawer`)**: Minh họa trực quan từng bước của retrieval pipeline và thời gian thực thi (Latency).
+
+---
+
+## 5. Nhóm chức năng Trợ lý Tra cứu Nghiên cứu (Research Chat Assistant & Grounded Q&A)
+
+### 5.1. Không gian Tra cứu Nghiên cứu Trung tâm (Main Research Chat Workspace — `/chat` hoặc `/`)
+- **Mục đích**: Đóng vai trò là màn hình làm việc chính phong cách Perplexity, tối ưu cho tra cứu thông tin có căn cứ.
+- **Input**: Câu hỏi hoặc chủ đề tra cứu của người dùng.
+- **Output**:
+  - Lời chào khởi đầu (Welcome State) kèm gợi ý chủ đề (Prompt Starters).
+  - Khung trả lời từ AI kèm hệ thống chú thích nguồn tương tác (`[1]`, `[2]`).
+  - Thẻ phân tích nhận định thành phần (`Claims Breakdown`).
+  - Thẻ định lượng độ bao phủ bằng chứng (`Evidence Coverage Card`).
+  - Ngăn trượt tra cứu bằng chứng chi tiết (`EvidenceDrawer`).
+  - Khung nhập liệu đa lượt cố định ở đáy màn hình (`chat-sticky-composer`).
+- **Actor**: Người dùng cuối, Nhà nghiên cứu.
+
+### 5.2. Nhận diện Ý định Người dùng (Intent Router — Deterministic Greeting & Identity Bypass)
+- **Mục đích**: Tự động nhận diện và phản hồi tức thì các câu chào hỏi (`hello`, `xin chào`, `hi`) hoặc câu hỏi danh tính (`bạn là ai`, `SourceCheck AI là gì`) mà không cần kích hoạt RAG pipeline.
+- **Cơ chế**: Áp dụng bộ lọc mẫu tất định (deterministic regex matcher), triệt tiêu độ trễ và ngăn chặn phản hồi nhầm `INSUFFICIENT_EVIDENCE`.
+
+### 5.3. Viết lại Truy vấn Ngữ cảnh (Contextual Query Rewriting)
+- **Mục đích**: Giải quyết hiện tượng đồng tham chiếu (coreference) trong hội thoại đa lượt (ví dụ: *"Ai là tác giả của nghiên cứu đó?"*).
+- **Cơ chế**: Tự động kết hợp ngữ cảnh lượt hỏi trước để tái tạo truy vấn độc lập hoàn chỉnh trước khi đưa vào bộ tìm kiếm lai.
+
+### 5.4. Nền tảng Lưu trữ Lịch sử Hội thoại (Conversation History — CHAT-02.1)
+- **Mục đích**: Lưu vết các phiên tra cứu và tin nhắn của từng người dùng, hỗ trợ hội thoại đa phiên và đối soát lại kết quả lịch sử.
+- **Input**: `user_id`, `conversation_id`, `role` (`user`/`assistant`), `content`, `extra_metadata` (chứa trích dẫn, claims, coverage).
+- **Output**: Dữ liệu thực thể `Conversation` và `Message` được lưu trữ toàn vẹn trong cơ sở dữ liệu.
+- **Actor**: Hệ thống backend.
+- **Cơ chế**:
+  - Phân cấp `User` -> `Conversation` -> `Message` với `CASCADE DELETE` triệt để.
+  - Phân định quyền sở hữu dữ liệu (Ownership Isolation) theo từng `user_id`.
+  - Quản lý lược đồ cơ sở dữ liệu qua Alembic Migration `003_add_conversations_and_messages.py`.
+
+---
+
+## 5.5. Nhóm chức năng Bảng điều khiển Tổng quan (System Dashboard — FE-04.9 & BE-04.9)
+
+### 5.5.1. Thống kê Hoạt động Toàn diện (`DashboardPage.tsx`)
+- **Mục đích**: Cung cấp bức tranh toàn cảnh về hoạt động và độ tin cậy của toàn bộ hệ thống.
+- **Input**: Dữ liệu tổng hợp từ endpoint `GET /api/v1/dashboard/stats`.
+- **Output**:
+  - Thẻ chỉ số tổng quan: Tổng số Tài liệu (Documents), Tổng số Câu hỏi (Questions), Tổng số Hội thoại (Conversations), Tổng số Lượt kiểm chứng (Fact-Checks).
+  - Biểu đồ phân bố phán quyết (Verdict Distribution): Số lượng và tỷ lệ % của `SUPPORTED`, `REFUTED`, `PARTIALLY_SUPPORTED`, `NOT_ENOUGH_INFO`.
+  - Thẻ truy cập nhanh tới các không gian chức năng chính.
+- **Actor**: Người dùng, Quản trị viên.
 
 ---
 
@@ -244,3 +273,26 @@ Tài liệu đặc tả toàn bộ danh mục tính năng của hệ thống Sou
 - **Actor**: Quản trị viên hệ thống (DevOps/Admin).
 - **Luồng chính**: Cơ chế monitoring tự động gọi các probe định kỳ để cảnh báo sự cố.
 - **Ghi chú**: Giúp phát hiện sớm khi tài khoản API bên ngoài hết hạn mức hoặc database bị gián đoạn kết nối.
+
+## 13. Current user-flow completion status
+
+### 9.1 Conversation and history
+
+- Conversation APIs require a Bearer access token and enforce user ownership.
+- The GREETING path persists a conversation, user message, canned response, and assistant message.
+- The Sidebar displays backend data for the current user and does not create conversations when Chat is opened or refreshed.
+- Automated conversation tests use an isolated test database/session and do not pollute the development database.
+
+### 9.2 User interface
+
+- Search Explorer uses Evidence Exploration (Vietnamese: evidence exploration). Hybrid/Dense/BM25, Top-K, and reranker are not user-facing form inputs; technical details remain in Retrieval Details.
+- Conversation context actions use consistent UI icons instead of emoji; destructive delete styling is preserved.
+- Chat input uses a soft default border and light gray hover/focus states without a heavy focus ring.
+- UI language uses typed vi/en dictionaries for text, placeholders, tooltips, titles, aria labels, keyboard hints, loading/error/empty states, auth, Search, Documents, Verification, and Dashboard.
+- Dashboard statistics are API-backed; refresh reuses the dashboard service and updates all related data blocks.
+
+### 9.3 Validation and boundaries
+
+- Frontend builds are validated with tsc && vite build.
+- Focused tests cover Chat, Sidebar, Search, Documents, Verification, auth, Dashboard, and conversation persistence/isolation.
+- These updates do not change the RAG pipeline, verification algorithms, or authentication architecture.

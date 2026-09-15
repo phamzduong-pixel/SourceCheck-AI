@@ -44,7 +44,7 @@ class OpenAILLMProvider(BaseLLMProvider):
         base_url: str = "https://api.openai.com/v1",
         timeout_seconds: float = settings.LLM_TIMEOUT_SECONDS,
     ):
-        self.api_key = api_key or settings.OPENAI_API_KEY
+        self.api_key = settings.OPENAI_API_KEY if api_key is None else api_key
         self.model = model or settings.LLM_MODEL
         self.base_url = base_url.rstrip("/")
         self.timeout_seconds = timeout_seconds
@@ -265,6 +265,15 @@ class MockLLMProvider(BaseLLMProvider):
 
 
 
+def _is_valid_openai_key(key: Optional[str]) -> bool:
+    if not key or not isinstance(key, str):
+        return False
+    k = key.strip()
+    if not k or not k.startswith("sk-"):
+        return False
+    return True
+
+
 def get_llm_provider(
     provider_name: Optional[str] = None,
     api_key: Optional[str] = None,
@@ -272,15 +281,15 @@ def get_llm_provider(
 ) -> BaseLLMProvider:
     """Factory creating LLM provider based on configuration with graceful mock fallback."""
     prov = (provider_name or settings.LLM_PROVIDER).lower()
-    key = api_key or settings.OPENAI_API_KEY
+    key = settings.OPENAI_API_KEY if api_key is None else api_key
 
     if prov == "mock":
         return MockLLMProvider()
 
     if prov == "openai":
-        if not key or not key.strip():
+        if not _is_valid_openai_key(key):
             logger.warning(
-                "OPENAI_API_KEY is empty. Falling back to MockLLMProvider for development/testing."
+                "OPENAI_API_KEY is empty or invalid format. Falling back to MockLLMProvider for development/testing."
             )
             return MockLLMProvider()
         return OpenAILLMProvider(api_key=key, model=model)

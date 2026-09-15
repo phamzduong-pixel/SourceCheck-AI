@@ -242,11 +242,24 @@ Hệ thống phân chia toàn bộ API thành 6 nhóm router độc lập:
 
 ### 4.5. Fact-Checking Verification (`/api/v1/verify`)
 - Mục đích: Đường ống thẩm định cốt lõi của SourceCheck AI.
-- Endpoints định hướng:
+- Endpoints:
   - `POST /api/v1/verify`: Kích hoạt toàn bộ quy trình: Bóc tách claim $\rightarrow$ Tìm kiếm bằng chứng $\rightarrow$ Phán quyết $\rightarrow$ Phát hiện mâu thuẫn $\rightarrow$ Gắn trích dẫn.
   - `POST /api/v1/verify/extract-claims`: Endpoint độc lập chỉ bóc tách các câu nhận định từ văn bản.
   - `GET /api/v1/verify/{request_id}`: Tra cứu lại báo cáo kết quả kiểm chứng đã thực hiện trước đó.
   - `GET /api/v1/verify/history`: Lấy danh sách lịch sử kiểm chứng của người dùng hiện tại.
+
+### 4.6. Conversation History Management (`/api/v1/conversations`)
+- Mục đích: Quản lý lịch sử hội thoại của người dùng, cô lập quyền sở hữu theo `user_id`, hỗ trợ cascade delete.
+- Endpoints:
+  - `GET /api/v1/conversations`: Liệt kê danh sách hội thoại của người dùng đã xác thực.
+  - `POST /api/v1/conversations`: Tạo phiên hội thoại mới.
+  - `GET /api/v1/conversations/{conversation_id}`: Lấy chi tiết lịch sử tin nhắn của một hội thoại.
+  - `DELETE /api/v1/conversations/{conversation_id}`: Xóa hội thoại và toàn bộ tin nhắn liên quan (`CASCADE DELETE`).
+
+### 4.7. System Dashboard & Analytics (`/api/v1/dashboard`)
+- Mục đích: Cung cấp số liệu thống kê tổng hợp thực tế về hệ thống cho người dùng và quản trị viên.
+- Endpoints:
+  - `GET /api/v1/dashboard/stats`: Trả về tổng số documents, questions, conversations, verifications và phân bố phán quyết (`SUPPORTED`, `REFUTED`, `PARTIALLY_SUPPORTED`, `NOT_ENOUGH_INFO`).
 
 ---
 

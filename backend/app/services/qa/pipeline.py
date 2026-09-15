@@ -26,6 +26,8 @@ from app.services.verification.schemas import (
     VerificationReport,
     VerificationVerdict,
 )
+from app.services.qa.intent_router import IntentRouter
+from app.services.qa.query_rewriter import QueryRewriter
 
 logger = logging.getLogger(__name__)
 
@@ -44,6 +46,8 @@ class QAPipeline:
         coverage_calculator: Optional[EvidenceCoverageCalculator] = None,
         citation_service: Optional[CitationService] = None,
         guardrail_service: Optional[GuardrailService] = None,
+        query_rewriter: Optional[QueryRewriter] = None,
+        intent_router: Optional[IntentRouter] = None,
     ):
         self.retrieval_service = retrieval_service or RetrievalService()
         self.generation_service = generation_service or GenerationService()
@@ -54,6 +58,8 @@ class QAPipeline:
         self.coverage_calculator = coverage_calculator or EvidenceCoverageCalculator()
         self.citation_service = citation_service or CitationService()
         self.guardrail_service = guardrail_service or GuardrailService()
+        self.query_rewriter = query_rewriter or QueryRewriter()
+        self.intent_router = intent_router or IntentRouter()
 
     async def run(
         self,
@@ -62,14 +68,16 @@ class QAPipeline:
         search_mode: str = "hybrid",
         session: Optional[AsyncSession] = None,
         metadata: Optional[Dict[str, Any]] = None,
+        conversation_history: Optional[str] = None,
     ) -> FinalAnswerResponse:
         """Execute the 13-stage deterministic Q&A pipeline.
         
         Order:
-        Question -> Input Guardrail -> Hybrid Search -> Reranking -> Evidence Selection ->
-        Context Builder -> LLM Generation -> Claim Extraction -> Evidence Matching ->
-        Claim Verification -> Contradiction Detection -> Citation Service ->
-        Answer Assembler -> Output Guardrail -> Final Answer
+        Question -> Input Guardrail -> Contextual Query Rewrite -> Hybrid Search ->
+        Reranking -> Evidence Selection -> Context Builder -> LLM Generation ->
+        Claim Extraction -> Evidence Matching -> Claim Verification ->
+        Contradiction Detection -> Citation Service -> Answer Assembler ->
+        Output Guardrail -> Final Answer
         """
         logger.info(f"Starting QAPipeline for query: '{question[:80]}...'")
 
@@ -85,10 +93,44 @@ class QAPipeline:
 
         clean_question = input_audit.sanitized_input
 
+        # 1.2 Intent Router: Deterministic greeting / identity / smalltalk handling
+        intent_result = self.intent_router.route(clean_question)
+        if intent_result.is_matched and intent_result.canned_response:
+            logger.info(
+                f"Intent Router matched '{intent_result.intent}' (sub={intent_result.sub_intent}) for query: '{clean_question[:40]}'"
+            )
+            meta = metadata.copy() if metadata else {}
+            meta.update(
+                {
+                    "sub_intent": intent_result.sub_intent,
+                    "intent_type": intent_result.intent.value if intent_result.intent else None,
+                }
+            )
+            return AnswerAssembler.create_canned_response(
+                question=clean_question,
+                answer=intent_result.canned_response,
+                intent=intent_result.intent.value if intent_result.intent else "GREETING",
+                metadata=meta,
+            )
+
+        search_query = clean_question
+        is_follow_up = False
+
+        # 1.5 Contextual Query Reformulation for follow-up queries
+        if conversation_history and conversation_history.strip():
+            rewrite_res = await self.query_rewriter.rewrite(
+                question=clean_question,
+                history=conversation_history,
+            )
+            if rewrite_res.is_follow_up and rewrite_res.standalone_query:
+                search_query = rewrite_res.standalone_query
+                is_follow_up = True
+                logger.info(f"Query rewritten for retrieval: '{clean_question}' -> '{search_query}'")
+
         # 2. Hybrid Retrieval + Reranking (Vector + BM25 + Cross-Encoder)
         fetch_k = top_k * 2
         search_res = await self.retrieval_service.search(
-            query=clean_question,
+            query=search_query,
             top_k=fetch_k,
             search_mode=search_mode,
             rerank=True,
@@ -100,13 +142,18 @@ class QAPipeline:
             return AnswerAssembler.create_insufficient_evidence_response(
                 question=clean_question,
                 reason="no_retrieval_hits",
-                metadata={"pipeline_stage": "retrieval", "total_hits": 0},
+                metadata={
+                    "pipeline_stage": "retrieval",
+                    "total_hits": 0,
+                    "search_query": search_query,
+                    "is_follow_up": is_follow_up,
+                },
             )
 
         # 3. Evidence Selection & Structured Context Assembly
         structured_context = self.retrieval_service.build_evidence_context(
             hits=search_res.hits,
-            query=clean_question,
+            query=search_query,
             max_evidence=top_k,
         )
 
@@ -115,13 +162,18 @@ class QAPipeline:
             return AnswerAssembler.create_insufficient_evidence_response(
                 question=clean_question,
                 reason="no_valid_evidence_after_selection",
-                metadata={"pipeline_stage": "evidence_selection"},
+                metadata={
+                    "pipeline_stage": "evidence_selection",
+                    "search_query": search_query,
+                    "is_follow_up": is_follow_up,
+                },
             )
 
         # 4. LLM Generation: Grounded answer synthesis
         gen_res = await self.generation_service.generate_answer(
             question=clean_question,
             context=structured_context,
+            conversation_history=conversation_history,
         )
 
         if gen_res.status == GenerationStatus.INSUFFICIENT_EVIDENCE:
@@ -130,7 +182,12 @@ class QAPipeline:
                 question=clean_question,
                 reason="generation_insufficient_evidence",
                 custom_answer=gen_res.answer,
-                metadata={"pipeline_stage": "generation", "model": gen_res.model_name},
+                metadata={
+                    "pipeline_stage": "generation",
+                    "model": gen_res.model_name,
+                    "search_query": search_query,
+                    "is_follow_up": is_follow_up,
+                },
             )
 
         # 5. Claim Extraction: Decompose answer into verifiable claims
@@ -193,6 +250,8 @@ class QAPipeline:
                 "footnotes_text": citation_summary.footnotes_text,
                 "token_estimate": structured_context.token_count_estimate,
                 "total_retrieval_hits": search_res.total_hits,
+                "search_query": search_query,
+                "is_follow_up": is_follow_up,
             }
         )
 

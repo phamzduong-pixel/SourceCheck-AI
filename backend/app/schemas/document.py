@@ -37,13 +37,15 @@ class DocumentResponse(BaseModel):
     publisher: Optional[str] = None
     doc_type: str
     created_at: datetime
+    updated_at: Optional[datetime] = None
     chunk_count: int = 0
+    doc_metadata: Optional[Dict[str, Any]] = None
 
     model_config = {"from_attributes": True}
 
 
 class DocumentDetailResponse(DocumentResponse):
-    """Detailed response including document chunks."""
+    """Detailed response including document chunks and raw content."""
 
     raw_content: str
     chunks: List[DocumentChunkResponse] = []

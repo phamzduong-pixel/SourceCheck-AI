@@ -34,12 +34,16 @@ def get_embedding_provider(
     """
     target = (provider_name or settings.EMBEDDING_PROVIDER).lower()
 
-    # Graceful fallback: If openai requested but no API key configured, use mock provider
-    if target == "openai" and not settings.OPENAI_API_KEY.strip():
-        logger.warning(
-            "OPENAI_API_KEY is empty. Falling back to MockDeterministicEmbeddingProvider for development/testing."
-        )
-        return MockDeterministicEmbeddingProvider(**kwargs)
+    # Graceful fallback: If openai requested but no valid API key configured, use mock provider
+    if target == "openai":
+        key = kwargs.get("api_key")
+        if key is None:
+            key = settings.OPENAI_API_KEY
+        if not key or not isinstance(key, str) or not key.strip() or not key.strip().startswith("sk-"):
+            logger.warning(
+                "OPENAI_API_KEY is empty or invalid format. Falling back to MockDeterministicEmbeddingProvider for development/testing."
+            )
+            return MockDeterministicEmbeddingProvider(**kwargs)
 
     provider_cls = _PROVIDER_REGISTRY.get(target)
     if not provider_cls:

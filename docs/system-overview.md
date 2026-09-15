@@ -47,34 +47,49 @@ Hệ thống được thiết kế phục vụ ba nhóm đối tượng chính:
 
 ## 5. Luồng hoạt động tổng thể (End-to-End Workflow)
 
-Quy trình xử lý một yêu cầu kiểm chứng trong SourceCheck AI diễn ra theo các bước tuần tự:
+Quy trình xử lý một yêu cầu kiểm chứng trong SourceCheck AI diễn ra theo đường ống tất định 13 giai đoạn:
 
 ```text
-[ Người dùng / Ứng dụng client ]
-             │ (Nhập văn bản, đường link hoặc tài liệu)
-             ▼
-[ 1. Presentation & API Layer ] ── Validate & Rate Limiting
-             │
-             ▼
-[ 2. Claim Extraction ] ────────── Bóc tách văn bản thành các nhận định sự kiện độc lập
-             │
-             ▼
-[ 3. Hybrid Retrieval ] ────────── Tìm kiếm bằng chứng từ Vector DB (ngữ nghĩa) + BM25 (từ khóa)
-             │
-             ▼
-[ 4. Cross-Encoder Reranking ] ─── Tinh lọc & xếp hạng lại top-K bằng chứng liên quan nhất
-             │
-             ▼
-[ 5. Verification & Reasoning ] ── Đối chiếu claim vs. evidence: Supported / Refuted / NEI
-             │
-             ▼
-[ 6. Contradiction & Guardrails ]─ Phát hiện mâu thuẫn chéo & kiểm tra độ trung thực (Faithfulness)
-             │
-             ▼
-[ 7. Citation Grounding ] ──────── Gắn nguồn trích dẫn trực tiếp và đoạn quote nguyên văn
-             │
-             ▼
-[ 8. Verification Report ] ─────── Trả kết quả JSON về Client & lưu trữ vào PostgreSQL
+[ Người dùng / Giao diện Web ]
+              │ (Nhập câu hỏi / văn bản / tài liệu)
+              ▼
+[ 1. Intent Router ] ──────────────► GREETING / IDENTITY ──► Phản hồi xã giao ngay lập tức (Bypass RAG)
+              │ (KNOWLEDGE_QUERY)
+              ▼
+[ 2. Input Guardrail ] ────────────► Kiểm tra an toàn, chống prompt injection & bảo mật
+              │
+              ▼
+[ 3. Contextual Query Rewriter ] ──► Viết lại query đa lượt giải quyết tham chiếu ngữ cảnh
+              │
+              ▼
+[ 4. Hybrid Retrieval ] ───────────► Dense Vector (pgvector) + Sparse Lexical (BM25)
+              │
+              ▼
+[ 5. Reciprocal Rank Fusion (RRF) ]► Hợp nhất danh sách thứ hạng (k=60)
+              │
+              ▼
+[ 6. Cross-Encoder Reranking ] ────► Tinh lọc & chấm điểm tương quan ngữ cảnh (bge-reranker-base)
+              │
+              ▼
+[ 7. Evidence Sufficiency ] ───────► Đánh giá ngưỡng bằng chứng (Thiếu -> Safe Insufficient Response)
+              │ (Đủ bằng chứng)
+              ▼
+[ 8. Context & LLM Generation ] ───► Lắp ghép Structured Context [E1], [E2] & sinh câu trả lời
+              │
+              ▼
+[ 9. Claim Extraction ] ───────────► Bóc tách văn bản thành các nhận định sự thật độc lập
+              │
+              ▼
+[ 10. Evidence Matching ] ─────────► Ánh xạ từng claim với đoạn bằng chứng liên quan
+              │
+              ▼
+[ 11. Claim Verification ] ────────► Phán quyết: SUPPORTED / PARTIALLY_SUPPORTED / REFUTED / NOT_ENOUGH_INFO
+              │
+              ▼
+[ 12. Contradiction & Coverage ] ──► Phát hiện mâu thuẫn đa nguồn & tính tỷ lệ bao phủ bằng chứng
+              │
+              ▼
+[ 13. Citation & Output Guardrail ]► Gắn số chú thích [1], [2], quote nguyên văn & xuất bản kết quả
 ```
 
 ---
@@ -82,25 +97,29 @@ Quy trình xử lý một yêu cầu kiểm chứng trong SourceCheck AI diễn 
 ## 6. Các thành phần chính của hệ thống
 
 1. **Frontend (`frontend/`)**: Giao diện web người dùng xây dựng trên nền React 18, Vite và TypeScript:
-   - Hệ thống thiết kế **Glassmorphism hiện đại** với hiệu ứng kính mờ (`backdrop-filter: blur(24px)`), nền pastel nhạt chuyển sắc động kèm các khối sáng nổi (ambient floating glow orbs).
-   - Quản lý phiên xác thực toàn cục (`AuthContext`, `useAuth`), bảo vệ tuyến đường (`ProtectedRoute`, `PublicOnlyRoute`).
-   - Hỗ trợ đăng nhập kép: Email + Mật khẩu (với nút hiển thị/ẩn SVG Eye) và Google OAuth 2.0 (`GoogleButton`, `OAuthCallbackPage`).
-2. **Backend API (`backend/app/api/`)**: Cung cấp các RESTful API phân tách theo domain nghiệp vụ (`auth`, `documents`, `search`, `questions`, `verification`, `health`) với FastAPI, hỗ trợ bảo vệ API qua JWT Bearer token.
+   - **Research Chat Assistant (`/chat` hoặc `/`)**: Giao diện tra cứu phong cách Perplexity, hỗ trợ hội thoại đa lượt, ngăn minh chứng trượt (Evidence Drawer), phân rã luận điểm và đo lường độ phủ bằng chứng.
+   - **Fact-Checking Workspace (`/fact-check`)**: Không gian kiểm chứng chuyên sâu văn bản, hiển thị phán quyết 4 trạng thái, lập trường và cảnh báo mâu thuẫn chéo.
+   - **Search / Retrieval Explorer (`/search`)**: Công cụ tra cứu retrieval độc lập, minh bạch hóa điểm số BM25, Dense Vector, RRF và Cross-Encoder.
+   - **Document Knowledge Base (`/documents`)**: Quản lý nạp, xem và xóa tài liệu tri thức nội bộ (PDF, DOCX, TXT).
+   - **System Dashboard (`/dashboard`)**: Tổng quan số liệu thực tế về Documents, Questions, Conversations, Verifications và phân bố phán quyết.
+   - **Design System & Theme**: Thiết kế hiện đại hỗ trợ chuyển đổi Light Mode & Dark Mode Matte Charcoal.
+2. **Backend API (`backend/app/api/`)**: Cung cấp các RESTful API phân tách theo domain nghiệp vụ (`auth`, `documents`, `search`, `questions`, `verify`, `dashboard`, `health`) với FastAPI, bảo vệ qua JWT Bearer token.
 3. **Core Services (`backend/app/services/`)**:
    - `auth_service.py` & `oauth/`: Đăng ký, xác thực, liên kết tài khoản và trao đổi token Google OAuth an toàn.
-   - `ingestion/`: Tải, làm sạch Unicode NFKC và phân tách tài liệu nguồn (Sentence Window, Fixed Size).
+   - `ingestion/`: Tải, làm sạch Unicode NFKC và phân tách tài liệu nguồn (Sentence Window, Fixed Size) từ PDF, DOCX, TXT.
    - `retrieval/`: Công cụ tìm kiếm lai (Hybrid Search: Dense Vector + BM25) kết hợp LlamaIndex và RRF fusion.
    - `reranking/`: Mô hình Cross-Encoder (`bge-reranker-base`) định lượng độ tương quan ngữ cảnh.
    - `generation/`: Quản lý prompt và điều phối LLM thông qua LangChain, ép kiểu đầu ra có cấu trúc.
-   - `verification/`: Trái tim nghiệp vụ của SourceCheck AI (bóc tách nhận định `ClaimExtractor`, đối khớp bằng chứng `EvidenceMatcher`, thẩm định lập trường `ClaimVerifier`, phát hiện mâu thuẫn `ContradictionDetector`).
-   - `citation/`: Hệ thống định vị nguồn, trích dẫn nguyên văn và chú thích bằng chứng có cấu trúc.
+   - `verification/`: Trái tim nghiệp vụ của SourceCheck AI (`ClaimExtractor`, `EvidenceMatcher`, `ClaimVerifier`, `ContradictionDetector`).
+   - `citation/`: Hệ thống định vị nguồn, trích dẫn nguyên văn và chú thích bằng chứng có cấu trúc (`[1]`, `[2]`).
    - `guardrail/`: Hàng rào kiểm soát ảo giác (Faithfulness Check) và an toàn thông tin.
-   - `qa/`: Điều phối toàn bộ quy trình Hỏi & Đáp (QAService) từ truy xuất đến xuất báo cáo kiểm chứng.
+   - `qa/`: Điều phối toàn bộ quy trình Q&A (`IntentRouter`, `QueryRewriter`, `QAPipeline`, `QAService`).
+   - `dashboard/`: Cung cấp thống kê tổng hợp vận hành hệ thống (`DashboardService`).
 4. **Database & Storage Layer**:
-   - *PostgreSQL + pgvector*: Lưu trữ thực thể dữ liệu quan hệ (Người dùng, Yêu cầu, Nhận định, Bằng chứng) và vector embeddings.
+   - *PostgreSQL + pgvector*: Lưu trữ thực thể dữ liệu quan hệ (Người dùng, Hội thoại, Tin nhắn, Tài liệu, Nhận định, Bằng chứng) và vector embeddings.
    - *Local SQLite Fallback*: Tự động khởi tạo và chuyển tiếp dữ liệu nội bộ (`sourcecheck.db`) khi chạy local development.
    - *Redis*: Lưu trữ bộ đệm và rate-limiting.
-5. **Evaluation Framework (`evaluation/`)**: Hệ thống thực nghiệm đo lường hiệu năng độc lập, chạy benchmark các chỉ số khoa học (Precision, Recall, F1, Faithfulness, Evidence Coverage).
+5. **Evaluation Framework (`evaluation/`)**: Hệ thống thực nghiệm đo lường 28 ca benchmark định lượng độc lập, kiểm thử Hit@K, Recall@K, Verification Accuracy/Macro-F1, và Intent Routing Accuracy.
 
 ---
 

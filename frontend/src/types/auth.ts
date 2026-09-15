@@ -8,6 +8,8 @@ export interface User {
   full_name: string;
   role: 'user' | 'researcher' | 'admin' | string;
   is_active: boolean;
+  avatar_url?: string | null;
+  auth_provider?: string;
   created_at: string;
 }
 
@@ -33,15 +35,7 @@ export interface GoogleLoginResponse {
   state: string;
 }
 
-export interface APIResponse<T> {
-  success: boolean;
-  data: T;
-  message?: string | null;
-  error?: {
-    code?: string;
-    details?: any;
-  } | null;
-}
+export type { APIResponse } from './common';
 
 export interface AuthState {
   user: User | null;

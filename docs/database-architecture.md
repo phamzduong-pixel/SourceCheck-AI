@@ -43,6 +43,9 @@ Tài liệu thiết kế kiến trúc cơ sở dữ liệu chi tiết cho hệ t
 
 ```mermaid
 erDiagram
+    USERS ||--o{ CONVERSATIONS : "owns"
+    CONVERSATIONS ||--|{ MESSAGES : "contains"
+
     USERS ||--o{ VERIFICATION_RESULTS : "creates"
     USERS ||--o{ QUESTIONS : "asks"
 
@@ -67,6 +70,25 @@ erDiagram
         string full_name
         string role
         boolean is_active
+        datetime created_at
+        datetime updated_at
+    }
+
+    CONVERSATIONS {
+        uuid id PK
+        uuid user_id FK
+        string title
+        boolean is_pinned
+        datetime created_at
+        datetime updated_at
+    }
+
+    MESSAGES {
+        uuid id PK
+        uuid conversation_id FK
+        string role
+        text content
+        jsonb extra_metadata
         datetime created_at
         datetime updated_at
     }
@@ -298,7 +320,32 @@ erDiagram
 - **Ràng buộc kiểm tra (Check Constraint)**:
   `CHECK (claim_id IS NOT NULL OR answer_id IS NOT NULL)`
 
-### 4.10. `evaluation_runs` (Dữ liệu Đánh giá Benchmark Tối giản)
+### 4.10. `conversations` (Phiên Hội thoại & Lịch sử Tra cứu - CHAT-02.1)
+- **Mục đích**: Lưu trữ thông tin từng phiên hội thoại/tra cứu của người dùng trong Research Chat Workspace.
+- **Cột**:
+  - `id`: `UUID`, Khóa chính.
+  - `user_id`: `UUID`, Khóa ngoại trỏ tới `users.id`, Bắt buộc, `ON DELETE CASCADE`.
+  - `title`: `VARCHAR(255)`, Bắt buộc, Mặc định `'Cuộc trò chuyện mới'`.
+  - `is_pinned`: `BOOLEAN`, Bắt buộc, Mặc định `FALSE`.
+  - `created_at`, `updated_at`: `TIMESTAMP WITH TIME ZONE`.
+- **Chỉ mục (Indexes)**:
+  - `idx_conversations_user_id`: Tối ưu hóa lọc danh sách hội thoại theo tài khoản.
+  - `idx_conversations_user_created`: Tối ưu hóa sắp xếp lịch sử theo thời gian tạo mới nhất.
+
+### 4.11. `messages` (Tin nhắn & Trạng thái Đa lượt - CHAT-02.1)
+- **Mục đích**: Lưu trữ chi tiết từng lượt hỏi của người dùng và câu trả lời kèm siêu dữ liệu bảo chứng của AI.
+- **Cột**:
+  - `id`: `UUID`, Khóa chính.
+  - `conversation_id`: `UUID`, Khóa ngoại trỏ tới `conversations.id`, Bắt buộc, `ON DELETE CASCADE`.
+  - `role`: `VARCHAR(32)`, Bắt buộc (`'user'`, `'assistant'`).
+  - `content`: `TEXT`, Bắt buộc (Nội dung tin nhắn).
+  - `extra_metadata`: `JSONB`, Tùy chọn (Lưu trữ citations, claims breakdown, evidence coverage, verification verdict).
+  - `created_at`, `updated_at`: `TIMESTAMP WITH TIME ZONE`.
+- **Chỉ mục (Indexes)**:
+  - `idx_messages_conversation_id`: Tối ưu hóa tải toàn bộ tin nhắn thuộc một cuộc trò chuyện.
+  - `idx_messages_conversation_created`: Sắp xếp các lượt hội thoại theo trình tự thời gian tuần tự.
+
+### 4.12. `evaluation_runs` (Dữ liệu Đánh giá Benchmark Tối giản)
 - **Mục đích**: Chỉ lưu siêu dữ liệu (metadata) và tóm tắt kết quả của các lần chạy benchmark, **không lưu hàng triệu bản ghi dataset mẫu**.
 - **Cột**:
   - `id`: `UUID`, Khóa chính.

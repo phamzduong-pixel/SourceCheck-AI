@@ -19,52 +19,59 @@ Hệ thống đặt ra 3 nguyên tắc bất biến:
 
 ---
 
-## 2. Kiến trúc tổng quan đường ống AI (Pipeline Architecture)
+## 2. Kiến trúc tổng quan đường ống AI (13-Stage Pipeline Architecture)
 
 ```text
                ┌────────────────────────────────────────────────────────┐
-               │                  User Input (Text / URL)               │
+               │                  User Input (Text / Query)             │
                └───────────────────────────┬────────────────────────────┘
                                            │
                                            ▼
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ 1. INGESTION & DECOMPOSITION                                                           │
-│    ├── Document Ingestion & Chunking (LlamaIndex Readers + Sentence/Fixed Splitters)   │
-│    └── Claim Extraction (Bóc tách văn bản thành các câu khẳng định sự thật độc lập)    │
+│ 1. INTENT ROUTING (Deterministic Regex / Keyword Intent Classifier)                    │
+│    ├── GREETING / IDENTITY ──► Phản hồi xã giao / danh tính tức thì (Bypass RAG)       │
+│    └── KNOWLEDGE_QUERY     ──► Tiếp tục đường ống RAG kiểm chứng chuyên sâu            │
 └──────────────────────────────────────────┬─────────────────────────────────────────────┘
                                            │
                                            ▼
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ 2. RETRIEVAL & FUSION (RETRIEVE)                                                       │
-│    ├── Dense Vector Retrieval (Embedding Sim: PostgreSQL + pgvector)                   │
+│ 2. INPUT GUARDRAIL & QUERY REWRITING                                                   │
+│    ├── Input Guardrail (Kiểm tra an toàn, chống prompt injection, cô lập untrusted)    │
+│    └── Contextual Query Rewriter (Giải quyết tham chiếu ngữ cảnh trong hội thoại đa lượt)│
+└──────────────────────────────────────────┬─────────────────────────────────────────────┘
+                                           │
+                                           ▼
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│ 3. HYBRID RETRIEVAL & RERANKING                                                        │
+│    ├── Dense Vector Retrieval (PostgreSQL + pgvector / HNSW Semantic Search)           │
 │    ├── Sparse Lexical Retrieval (BM25 Keyword Matching)                                │
-│    ├── Hybrid Search Fusion (Reciprocal Rank Fusion - RRF)                             │
-│    └── Cross-Encoder Reranking (BGE-Reranker / Cohere: Scoring query-passage pairs)    │
-
+│    ├── Hybrid Search Fusion (Reciprocal Rank Fusion - RRF k=60)                        │
+│    └── Cross-Encoder Reranking (BGE-Reranker-Base: Đo tương quan sâu câu hỏi - passage)│
 └──────────────────────────────────────────┬─────────────────────────────────────────────┘
                                            │
                                            ▼
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ 3. CONTEXT & GENERATION (GENERATE)                                                     │
-│    ├── Context Builder (Lắp ghép top-k bằng chứng có đánh số)                          │
-│    └── LLM Generation (LangChain Prompting + Structured Pydantic Output)               │
+│ 4. EVIDENCE SUFFICIENCY & CONTEXT BUILDING                                             │
+│    ├── Evidence Sufficiency Check (Ngắt an toàn nếu không tìm thấy bằng chứng hợp lệ)  │
+│    └── Structured Context Builder (Lắp ghép top-k bằng chứng có đánh số [E1], [E2])    │
 └──────────────────────────────────────────┬─────────────────────────────────────────────┘
                                            │
                                            ▼
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ 4. REASONING & VERIFICATION (VERIFY)                                                   │
+│ 5. GROUNDED GENERATION & FACT-CHECKING REASONING                                       │
+│    ├── Grounded LLM Generation (LangChain Prompting + Structured Pydantic Output)      │
+│    ├── Claim Extraction (Bóc tách câu trả lời thành các mệnh đề sự thật độc lập)      │
 │    ├── Evidence Matching (Ánh xạ từng Claim với bằng chứng liên quan)                  │
 │    ├── Claim Verification (Suy luận Stance: SUPPORTED / REFUTED / NOT_ENOUGH_INFO)     │
-│    ├── Contradiction Detection (Nhận diện mâu thuẫn nội tại và xung đột tài liệu)     │
-│    └── Evidence Coverage Calculation (Đo lường định lượng tỷ lệ bằng chứng phủ)       │
+│    └── Contradiction Detection (Nhận diện mâu thuẫn nội tại và xung đột đa nguồn)      │
 └──────────────────────────────────────────┬─────────────────────────────────────────────┘
                                            │
                                            ▼
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
-│ 5. GUARDRAILS & CITATION (CITE)                                                        │
-│    ├── Faithfulness Check (Kiểm tra độ bám sát bằng chứng, chống ảo giác)              │
-│    ├── Citation Grounding (Định vị đoạn trích nguyên văn quote và URL nguồn)           │
-│    └── Final Verification Report Synthesis                                             │
+│ 6. CITATION & OUTPUT GUARDRAIL                                                         │
+│    ├── Footnote Citation Grounding (Định vị đoạn trích nguyên văn quote và URL nguồn)  │
+│    ├── Evidence Coverage Calculation (Đo lường định lượng tỷ lệ bằng chứng phủ)       │
+│    └── Output Faithfulness Guardrail (Kiểm định tính trung thực cuối cùng)             │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -633,34 +640,53 @@ Tổng hợp kết quả từ mọi tầng thành đối tượng `FinalAnswerRe
 
 ---
 
-## 7. Pipeline Đầu Cuối (Core RAG + Verification End-to-End Pipeline - Checkpoint Prompt 18)
+## 7. Pipeline Đầu Cuối (Core RAG + Verification End-to-End Pipeline)
 
-Được triển khai tại `backend/app/services/qa/` (`pipeline.py` & `qa_service.py`), đây là **checkpoint ổn định đầu tiên của Core Backend**, tích hợp toàn bộ các thành phần AI modular thành một chuỗi xử lý thống nhất:
+Được triển khai tại `backend/app/services/qa/` (`pipeline.py`, `qa_service.py`, `intent_router.py`, `query_rewriter.py`), đây là **hạt nhân xử lý hoàn chỉnh của Core Backend**, tích hợp toàn bộ các thành phần AI modular thành một chuỗi xử lý thống nhất:
 
 ```text
-                 ┌─ Vector Search ─┐
-Question ────────┤                 ├─ RRF
-                 └─ BM25 Search ───┘
-                          ↓
-                     Reranking
-                          ↓
-                       Evidence
-                          ↓
-                     Generation
-                          ↓
-                  Claim Extraction
-                          ↓
-                  Evidence Matching
-                          ↓
-                  Claim Verification
-                          ↓
-               Contradiction Detection
-                          ↓
-                      Citation
-                          ↓
-                      Guardrail
-                          ↓
-                    Final Answer
+                  User Question
+                        │
+                        ▼
+               [ 1. Intent Router ] ──► (GREETING/IDENTITY: Phản hồi tức thì)
+                        │ (KNOWLEDGE_QUERY)
+                        ▼
+              [ 2. Input Guardrail ]
+                        │
+                        ▼
+          [ 3. Contextual Query Rewriter ]
+                        │
+                        ▼
+             ┌─ Dense Vector Search ─┐
+             │                       ├─► [ 5. Reciprocal Rank Fusion (RRF) ]
+             └─ Sparse BM25 Search ──┘
+                        │
+                        ▼
+           [ 6. Cross-Encoder Reranking ]
+                        │
+                        ▼
+         [ 7. Evidence Sufficiency Check ] ──► (Thiếu: Safe Insufficient Response)
+                        │ (Đủ bằng chứng)
+                        ▼
+        [ 8. Context Builder & Generation ]
+                        │
+                        ▼
+             [ 9. Claim Extraction ]
+                        │
+                        ▼
+             [ 10. Evidence Matching ]
+                        │
+                        ▼
+            [ 11. Claim Verification ]
+                        │
+                        ▼
+          [ 12. Contradiction & Coverage ]
+                        │
+                        ▼
+         [ 13. Citation & Output Guardrail ]
+                        │
+                        ▼
+                   Final Answer
 ```
 
 > [!IMPORTANT]
@@ -671,35 +697,49 @@ Question ────────┤                 ├─ RRF
 ### 7.1. Cấu trúc Điều phối & Dịch vụ (`QAPipeline` & `QAService`)
 ```text
 backend/app/services/qa/
-├── pipeline.py       # QAPipeline: Điều phối 13 bước từ Question đến Final Answer
-├── qa_service.py     # QAService: Facade xử lý exception an toàn và lưu trữ CSDL quan hệ
+├── intent_router.py   # IntentRouter: Phân loại deterministic Greeting / Identity / Knowledge Query
+├── query_rewriter.py  # QueryRewriter: Viết lại query đa lượt giải quyết tham chiếu ngữ cảnh
+├── pipeline.py        # QAPipeline: Điều phối 13 bước từ Question đến Final Answer
+├── qa_service.py      # QAService: Facade xử lý exception an toàn và lưu trữ CSDL quan hệ
 └── __init__.py
 ```
 
 1. **Chuỗi 13 Bước Thực thi Tuyến tính**:
-   1. `Input Guardrail`: Kiểm tra độ an toàn, chống prompt injection, cô lập tài liệu (Untrusted Data).
-   2. `Hybrid Search`: Kết hợp đồng thời Vector Search (pgvector) + BM25 Search qua Reciprocal Rank Fusion (RRF).
-   3. `Cross-Encoder Reranking`: Sắp xếp lại danh sách đoạn trích theo mức độ liên quan ngữ nghĩa chuyên sâu.
-   4. `Evidence Selection`: Khử trùng lặp và lọc bỏ các đoạn trích dư thừa.
-   5. `Context Builder`: Đóng gói `StructuredContext` kèm ngân sách token và mã định danh cố định (`[E1], [E2]`).
-   6. `LLM Generation`: Sinh câu trả lời dựa trên bằng chứng (ngắt sớm nếu `INSUFFICIENT_EVIDENCE`).
-   7. `Claim Extraction`: Tách câu trả lời thành danh sách các mệnh đề độc lập có thể kiểm chứng.
-   8. `Evidence Matching`: Ánh xạ các đoạn bằng chứng tiềm năng cho từng nhận định.
-   9. `Claim Verification`: Đánh giá lập trường thực nghiệm (`SUPPORTED`, `PARTIALLY_SUPPORTED`, `REFUTED`, `NOT_ENOUGH_INFO`).
-   10. `Contradiction Detection`: Quét phát hiện mâu thuẫn nhận định và xung đột dữ liệu chéo giữa các nguồn tin.
-   11. `Citation Service`: Trích xuất chuỗi trích dẫn nguyên văn và đánh số chú thích chân trang tuần tự (`[1]`, `[2]`).
-   12. `Final Answer Assembly`: Tổng hợp câu trả lời, nhận định, bằng chứng, trích dẫn, độ bao phủ và bản tóm tắt phán quyết.
-   13. `Output Guardrail`: Thẩm tra tính toàn vẹn cuối cùng trước khi phản hồi người dùng.
+   1. `Intent Router`: Nhận diện các intent xã giao hoặc định danh cơ bản để phản hồi trực tiếp, tối ưu hóa độ trễ và tránh truy xuất RAG không cần thiết.
+   2. `Input Guardrail`: Kiểm tra độ an toàn, chống prompt injection, cô lập tài liệu (Untrusted Data).
+   3. `Contextual Query Rewriter`: Tự động nhận diện đại từ/thay thế ngữ cảnh trong hội thoại đa lượt và viết lại thành truy vấn độc lập.
+   4. `Hybrid Search`: Kết hợp đồng thời Vector Search (pgvector) + BM25 Search.
+   5. `Reciprocal Rank Fusion (RRF)`: Hợp nhất danh sách thứ hạng với tham số tiêu chuẩn $k=60$.
+   6. `Cross-Encoder Reranking`: Sắp xếp lại danh sách đoạn trích theo mức độ liên quan ngữ nghĩa chuyên sâu (`bge-reranker-base`).
+   7. `Evidence Sufficiency & Selection`: Đánh giá ngưỡng bao phủ bằng chứng; ngắt an toàn và trả về phản hồi chuẩn nếu không đủ cơ sở dữ liệu.
+   8. `Context Builder & LLM Generation`: Đóng gói `StructuredContext` kèm mã định danh `[E1], [E2]` và sinh câu trả lời bám sát bằng chứng.
+   9. `Claim Extraction`: Tách câu trả lời thành danh sách các mệnh đề độc lập có thể kiểm chứng.
+   10. `Evidence Matching`: Ánh xạ các đoạn bằng chứng tiềm năng cho từng nhận định.
+   11. `Claim Verification`: Đánh giá lập trường thực nghiệm (`SUPPORTED`, `PARTIALLY_SUPPORTED`, `REFUTED`, `NOT_ENOUGH_INFO`).
+   12. `Contradiction Detection & Coverage`: Quét phát hiện mâu thuẫn nhận định, xung đột dữ liệu chéo và đo lường tỷ lệ bao phủ bằng chứng.
+   13. `Citation Service & Output Guardrail`: Trích xuất chuỗi trích dẫn nguyên văn, đánh số chú thích chân trang tuần tự (`[1]`, `[2]`), và thẩm tra độ trung thực (Faithfulness) cuối cùng.
 
 2. **Lưu vết Quan hệ (Relational Provenance Traceability)**:
    $$\mathbf{Question} \longrightarrow \mathbf{Answer} \longrightarrow \mathbf{Claim} \longrightarrow \mathbf{VerificationResult} \longrightarrow \mathbf{Evidence} \longrightarrow \mathbf{Citation} \longrightarrow \mathbf{Source}$$
-   - Tự động lưu trữ vào PostgreSQL khi có session hoạt động, bảo đảm không tạo bản ghi trùng lặp và liên kết chặt chẽ mọi mắt xích kiểm chứng.
+   - Tự động lưu trữ vào PostgreSQL/SQLite khi có session hoạt động, bảo đảm không tạo bản ghi trùng lặp và liên kết chặt chẽ mọi mắt xích kiểm chứng.
 
 ---
 
-## 8. Tích hợp Đánh giá Định lượng (Evaluation Alignment)
+## 8. Phân định Hệ thống Hiện tại & Định hướng Mở rộng Tương lai
 
-Pipeline AI được thiết kế để kết nối trực tiếp với các framework đánh giá khoa học trong thư mục `evaluation/`:
-- Tách bạch rõ ràng giữa pha truy xuất (Retrieval) và pha suy luận (Reasoning) giúp đo lường độc lập chất lượng tìm kiếm (Recall@K, NDCG@K) và chất lượng phán quyết (Verification F1-score).
-- Hỗ trợ cơ chế gạt cờ cấu hình (feature flags) để thực hiện các bài **Ablation Study** phục vụ nghiên cứu khoa học.
+| Tiêu chí | Hệ thống Hiện tại (Current Production Implementation) | Đề xuất Mở rộng Tương lai (Future Research Extension) |
+| :--- | :--- | :--- |
+| **Mô hình Điều phối** | 13-stage Deterministic Pipeline (Kiểm soát chặt chẽ, 100% tái lập) | Dynamic Multi-Agent Routing / Adaptive Graph RAG |
+| **Nguồn Dữ liệu** | Internal Verified Knowledge Base (PDF, DOCX, TXT via pgvector + BM25) | Web Search APIs (Tavily/Google) + Social Media Feeds Real-time Ingestion |
+| **Intent Classifier** | Deterministic Regex & Pattern Matcher (Zero latency, 100% precision) | Fine-tuned SLM Classifier / Zero-shot Intent Router |
+| **Reranking** | Local Cross-Encoder (`bge-reranker-base`) | Cohere Rerank v3 API / ColBERTv2 late-interaction |
+| **Lưu trữ Hội thoại** | Relational User-Conversation-Message Schema với Cascade Delete | Hierarchical Memory Tree / Long-term Vector Memory |
+
+---
+
+## 9. Tích hợp Đánh giá Định lượng (Evaluation Alignment)
+
+Pipeline AI được kết nối trực tiếp với bộ benchmark khoa học trong thư mục `evaluation/`:
+- **Bộ dữ liệu chuẩn hóa**: 28 ca thực nghiệm bao phủ đầy đủ các trường hợp: có bằng chứng đầy đủ, thiếu bằng chứng (`INSUFFICIENT_EVIDENCE`), có mâu thuẫn chéo giữa các nguồn tài liệu (`CONTRADICTION`), và các query xã giao (`GREETING/IDENTITY`).
+- **Kết quả thực tế**: Đạt độ chính xác 100% (28/28 cases passed), Hit@1 = 1.0, Recall@1 = 1.0, Verification Accuracy = 1.0, và Intent Routing Accuracy = 1.0. Chi tiết xem tại [Evaluation Report](docs/evaluation.md).
 

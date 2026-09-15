@@ -10,6 +10,7 @@ from app.models.claim import Claim
 from app.models.evidence import Evidence
 from app.models.citation import Citation
 from app.models.evaluation import EvaluationRun
+from app.models.conversation import Conversation, Message
 
 __all__ = [
     "Base",
@@ -26,4 +27,7 @@ __all__ = [
     "Evidence",
     "Citation",
     "EvaluationRun",
+    "Conversation",
+    "Message",
 ]
+

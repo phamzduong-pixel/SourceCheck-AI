@@ -1,10 +1,12 @@
+from datetime import datetime, timezone
 import logging
 from typing import Optional
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.dependencies import get_db, get_qa_service, get_current_active_user
 from app.models.user import User
+from app.repositories.conversation_repository import ConversationRepository
 from app.schemas.common import APIResponse
 from app.schemas.qa import QuestionRequest
 from app.services.generation.schemas import FinalAnswerResponse
@@ -27,40 +29,93 @@ async def ask_question(
     qa_service: QAService = Depends(get_qa_service),
     db: AsyncSession = Depends(get_db),
 ):
-    """End-to-End Grounded Q&A API:
-    
-    1. Input Guardrail: Validate query & isolate untrusted data
-    2. Hybrid Search: Vector + BM25 search with Reciprocal Rank Fusion
-    3. Cross-Encoder Reranking: Semantic passage scoring
-    4. Evidence Selection: Redundancy filtering & deduplication
-    5. Context Builder: Structured evidence framing with token budget limits
-    6. LLM Generation: Grounded answer generation
-    7. Claim Extraction: Decompose answer into verifiable atomic claims
-    8. Evidence Matching: Match claims to candidate evidence items
-    9. Claim Verification: Stance evaluation (SUPPORTED, REFUTED, etc.)
-    10. Contradiction Detection: Cross-source & claim contradiction detection
-    11. Citation Service: Verbatim quotes and stable footnote indexing [1], [2]
-    12. Final Answer Assembly: Unified structured response
-    13. Output Guardrail: Integrity audit before returning to client
-    """
-    logger.info(f"Received Q&A request for question: '{request.question[:60]}...'")
+    """End-to-End Grounded Q&A API with optional conversation context & follow-up."""
+    logger.info(f"Received Q&A request for question: '{request.question[:60]}...' (conv={request.conversation_id})")
+
+    conversation = None
+    history_text = None
+
+    # 1. Ownership and context resolution if conversation_id is provided
+    if request.conversation_id is not None:
+        conversation = await ConversationRepository.get_by_id(db, request.conversation_id)
+        if not conversation or conversation.user_id != current_user.id:
+            logger.warning(
+                f"Conversation {request.conversation_id} not found or does not belong to user {current_user.id}"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Cuộc trò chuyện không tồn tại.",
+            )
+
+        # Fetch prior messages in chronological order
+        prior_messages = await ConversationRepository.list_messages(db, request.conversation_id)
+        if prior_messages:
+            # Take a reasonable recent history window (last 6 messages = 3 turns)
+            recent_turns = prior_messages[-6:]
+            history_lines = []
+            for msg in recent_turns:
+                role_label = "User" if msg.role == "user" else "Assistant"
+                history_lines.append(f"{role_label}: {msg.content}")
+            history_text = "\n".join(history_lines)
+
     try:
+        # 2. Execute Q&A pipeline (with optional contextual history)
         final_answer = await qa_service.ask(
             question=request.question,
             top_k=request.top_k,
             search_mode=request.search_mode,
             session=db,
+            conversation_history=history_text,
         )
+
+        # 3. Conversational intents must also have durable conversation history.
+        # The frontend normally creates the conversation first, but keep the API
+        # correct when a new greeting arrives without a conversation_id.
+        intent_type = final_answer.metadata.get("intent")
+        if conversation is None and intent_type in {"GREETING", "IDENTITY", "SMALLTALK"}:
+            title = request.question.strip()[:48] or "New conversation"
+            conversation = await ConversationRepository.create(db, current_user.id, title=title)
+            final_answer.metadata["conversation_id"] = str(conversation.id)
+
+        # 4. Persist messages when a conversation is available.
+        if conversation is not None:
+            # Persist user question
+            await ConversationRepository.create_message(
+                session=db,
+                conversation_id=conversation.id,
+                role="user",
+                content=request.question,
+            )
+
+            # Persist assistant response with structured provenance metadata
+            extra_metadata = {
+                "status": final_answer.status.value,
+                "evidence_coverage": final_answer.evidence_coverage,
+                "citations": [c.model_dump() for c in final_answer.citations],
+                "claims": [c.model_dump() for c in final_answer.claims],
+                "evidence": [e.model_dump() for e in final_answer.evidence],
+                "verification_summary": final_answer.verification_summary,
+            }
+            await ConversationRepository.create_message(
+                session=db,
+                conversation_id=conversation.id,
+                role="assistant",
+                content=final_answer.answer,
+                extra_metadata=extra_metadata,
+            )
+
+            # Update conversation timestamp to maintain sorting order
+            conversation.updated_at = datetime.now(timezone.utc)
+            await db.commit()
+
         return APIResponse(success=True, data=final_answer)
+
+    except HTTPException:
+        raise
 
     except Exception as e:
         logger.exception(f"Unexpected error in /questions/ask: {str(e)}")
-        # Fail gracefully: return safe generic response rather than 500 stack trace
-        from app.services.generation.answer_assembler import AnswerAssembler
-        fallback_resp = AnswerAssembler.create_insufficient_evidence_response(
-            question=request.question,
-            reason=f"api_exception: {str(e)}",
-            custom_answer="Đã xảy ra lỗi không mong muốn trong quá trình xử lý câu hỏi. Vui lòng thử lại sau.",
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Đã xảy ra sự cố nội bộ khi xử lý câu hỏi. Vui lòng thử lại sau.",
         )
-        return APIResponse(success=False, data=fallback_resp, message="Đã xảy ra sự cố nội bộ.")
-

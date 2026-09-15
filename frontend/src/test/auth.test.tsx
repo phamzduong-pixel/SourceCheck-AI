@@ -31,12 +31,12 @@ describe('Authentication Pages & Routing', () => {
       );
 
       expect(screen.getByText('SourceCheck AI')).toBeInTheDocument();
-      expect(screen.getByText('Welcome back')).toBeInTheDocument();
+      expect(screen.getByText(/Welcome back|Chào mừng trở lại/)).toBeInTheDocument();
       expect(screen.getByLabelText(/^email$/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/^password$/i)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /continue with google/i })).toBeInTheDocument();
-      expect(screen.getByText(/create account/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/^(password|mật khẩu)$/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /sign in|đăng nhập/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /continue with google|tiếp tục với google/i })).toBeInTheDocument();
+      expect(screen.getByText(/create account|tạo tài khoản/i)).toBeInTheDocument();
     });
 
     it('validates empty inputs on submit', async () => {
@@ -48,7 +48,7 @@ describe('Authentication Pages & Routing', () => {
         </MemoryRouter>
       );
 
-      const submitBtn = screen.getByRole('button', { name: /sign in/i });
+      const submitBtn = screen.getByRole('button', { name: /sign in|đăng nhập/i });
       fireEvent.click(submitBtn);
 
       await waitFor(() => {
@@ -65,8 +65,8 @@ describe('Authentication Pages & Routing', () => {
         </MemoryRouter>
       );
 
-      const passwordInput = screen.getByLabelText(/^password$/i) as HTMLInputElement;
-      const toggleBtn = screen.getByRole('button', { name: /show password/i });
+      const passwordInput = screen.getByLabelText(/^(password|mật khẩu)$/i) as HTMLInputElement;
+      const toggleBtn = screen.getByRole('button', { name: /show password|hiện mật khẩu/i });
 
       expect(passwordInput.type).toBe('password');
       fireEvent.click(toggleBtn);
@@ -93,8 +93,8 @@ describe('Authentication Pages & Routing', () => {
       );
 
       fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: 'user@example.com' } });
-      fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'wrongpass' } });
-      fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
+      fireEvent.change(screen.getByLabelText(/^(password|mật khẩu)$/i), { target: { value: 'wrongpass' } });
+      fireEvent.click(screen.getByRole('button', { name: /sign in|đăng nhập/i }));
 
       await waitFor(() => {
         expect(screen.getByText('Email hoặc mật khẩu không chính xác.')).toBeInTheDocument();
@@ -143,8 +143,8 @@ describe('Authentication Pages & Routing', () => {
       );
 
       fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: 'valid@example.com' } });
-      fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'CorrectPass123' } });
-      fireEvent.click(screen.getByRole('button', { name: /sign in/i }));
+      fireEvent.change(screen.getByLabelText(/^(password|mật khẩu)$/i), { target: { value: 'CorrectPass123' } });
+      fireEvent.click(screen.getByRole('button', { name: /sign in|đăng nhập/i }));
 
       await waitFor(() => {
         expect(localStorage.getItem(TOKEN_STORAGE_KEY)).toBe('fake-jwt-token-123');
@@ -164,13 +164,13 @@ describe('Authentication Pages & Routing', () => {
       );
 
       expect(screen.getByText('SourceCheck AI')).toBeInTheDocument();
-      expect(screen.getByText('Create your account')).toBeInTheDocument();
+      expect(screen.getByRole('heading')).toHaveTextContent(/Create your account|T?o t?i kho?n|T.o t.i kho.n/i);
       expect(screen.getByLabelText(/^email$/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/^password$/i)).toBeInTheDocument();
-      expect(screen.getByLabelText(/^confirm password$/i)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /create account/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /continue with google/i })).toBeInTheDocument();
-      expect(screen.getByText(/sign in/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/^(password|mật khẩu)$/i)).toBeInTheDocument();
+      expect(screen.getByLabelText(/^(confirm password|xác nhận mật khẩu)$/i)).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /create account|tạo tài khoản/i })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: /continue with google|tiếp tục với google/i })).toBeInTheDocument();
+      expect(screen.getByText(/sign in|đăng nhập/i)).toBeInTheDocument();
     });
 
     it('rejects invalid email formats on register', async () => {
@@ -183,9 +183,9 @@ describe('Authentication Pages & Routing', () => {
       );
 
       fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: 'invalid-email-format' } });
-      fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'Password123' } });
-      fireEvent.change(screen.getByLabelText(/^confirm password$/i), { target: { value: 'Password123' } });
-      fireEvent.click(screen.getByRole('button', { name: /create account/i }));
+      fireEvent.change(screen.getByLabelText(/^(password|mật khẩu)$/i), { target: { value: 'Password123' } });
+      fireEvent.change(screen.getByLabelText(/^(confirm password|xác nhận mật khẩu)$/i), { target: { value: 'Password123' } });
+      fireEvent.click(screen.getByRole('button', { name: /create account|tạo tài khoản/i }));
 
       await waitFor(() => {
         expect(screen.getByText(/định dạng email không hợp lệ/i)).toBeInTheDocument();
@@ -202,9 +202,9 @@ describe('Authentication Pages & Routing', () => {
       );
 
       fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: 'test@example.com' } });
-      fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: '123' } });
-      fireEvent.change(screen.getByLabelText(/^confirm password$/i), { target: { value: '123' } });
-      fireEvent.click(screen.getByRole('button', { name: /create account/i }));
+      fireEvent.change(screen.getByLabelText(/^(password|mật khẩu)$/i), { target: { value: '123' } });
+      fireEvent.change(screen.getByLabelText(/^(confirm password|xác nhận mật khẩu)$/i), { target: { value: '123' } });
+      fireEvent.click(screen.getByRole('button', { name: /create account|tạo tài khoản/i }));
 
       await waitFor(() => {
         expect(screen.getByText(/tối thiểu 6 ký tự/i)).toBeInTheDocument();
@@ -221,9 +221,9 @@ describe('Authentication Pages & Routing', () => {
       );
 
       fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: 'test@example.com' } });
-      fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'Password123' } });
-      fireEvent.change(screen.getByLabelText(/^confirm password$/i), { target: { value: 'DifferentPassword' } });
-      fireEvent.click(screen.getByRole('button', { name: /create account/i }));
+      fireEvent.change(screen.getByLabelText(/^(password|mật khẩu)$/i), { target: { value: 'Password123' } });
+      fireEvent.change(screen.getByLabelText(/^(confirm password|xác nhận mật khẩu)$/i), { target: { value: 'DifferentPassword' } });
+      fireEvent.click(screen.getByRole('button', { name: /create account|tạo tài khoản/i }));
 
       await waitFor(() => {
         expect(screen.getByText(/mật khẩu xác nhận không khớp/i)).toBeInTheDocument();
@@ -247,9 +247,9 @@ describe('Authentication Pages & Routing', () => {
       );
 
       fireEvent.change(screen.getByLabelText(/^email$/i), { target: { value: 'existing@example.com' } });
-      fireEvent.change(screen.getByLabelText(/^password$/i), { target: { value: 'Password123' } });
-      fireEvent.change(screen.getByLabelText(/^confirm password$/i), { target: { value: 'Password123' } });
-      fireEvent.click(screen.getByRole('button', { name: /create account/i }));
+      fireEvent.change(screen.getByLabelText(/^(password|mật khẩu)$/i), { target: { value: 'Password123' } });
+      fireEvent.change(screen.getByLabelText(/^(confirm password|xác nhận mật khẩu)$/i), { target: { value: 'Password123' } });
+      fireEvent.click(screen.getByRole('button', { name: /create account|tạo tài khoản/i }));
 
       await waitFor(() => {
         expect(screen.getByText('Email đã được đăng ký trong hệ thống.')).toBeInTheDocument();

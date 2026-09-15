@@ -1,0 +1,141 @@
+{
+  "total_cases": 28,
+  "passed_cases": 28,
+  "failed_cases_count": 0,
+  "execution_time_seconds": 0.002,
+  "category_distribution": {
+    "contradiction": 5,
+    "grounded_qa": 6,
+    "insufficient_evidence": 5,
+    "fact_check": 6,
+    "intent_routing": 6
+  },
+  "retrieval_metrics": {
+    "total_queries": 16,
+    "metrics": {
+      "hit@1": 1.0,
+      "recall@1": 1.0,
+      "precision@1": 1.0,
+      "mrr@1": 1.0,
+      "hit@3": 1.0,
+      "recall@3": 1.0,
+      "precision@3": 0.9688,
+      "mrr@3": 1.0,
+      "hit@5": 1.0,
+      "recall@5": 1.0,
+      "precision@5": 0.9688,
+      "mrr@5": 1.0
+    }
+  },
+  "verification_metrics": {
+    "total_samples": 22,
+    "accuracy": 1.0,
+    "macro_precision": 1.0,
+    "macro_recall": 1.0,
+    "macro_f1": 1.0,
+    "weighted_precision": 1.0,
+    "weighted_recall": 1.0,
+    "weighted_f1": 1.0,
+    "per_class": {
+      "SUPPORTED": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 8
+      },
+      "PARTIALLY_SUPPORTED": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 1
+      },
+      "REFUTED": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 7
+      },
+      "NOT_ENOUGH_INFO": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 6
+      }
+    },
+    "confusion_matrix": {
+      "SUPPORTED": {
+        "SUPPORTED": 8,
+        "PARTIALLY_SUPPORTED": 0,
+        "REFUTED": 0,
+        "NOT_ENOUGH_INFO": 0
+      },
+      "PARTIALLY_SUPPORTED": {
+        "SUPPORTED": 0,
+        "PARTIALLY_SUPPORTED": 1,
+        "REFUTED": 0,
+        "NOT_ENOUGH_INFO": 0
+      },
+      "REFUTED": {
+        "SUPPORTED": 0,
+        "PARTIALLY_SUPPORTED": 0,
+        "REFUTED": 7,
+        "NOT_ENOUGH_INFO": 0
+      },
+      "NOT_ENOUGH_INFO": {
+        "SUPPORTED": 0,
+        "PARTIALLY_SUPPORTED": 0,
+        "REFUTED": 0,
+        "NOT_ENOUGH_INFO": 6
+      }
+    }
+  },
+  "intent_metrics": {
+    "total_samples": 6,
+    "accuracy": 1.0,
+    "macro_precision": 1.0,
+    "macro_recall": 1.0,
+    "macro_f1": 1.0,
+    "weighted_precision": 1.0,
+    "weighted_recall": 1.0,
+    "weighted_f1": 1.0,
+    "per_class": {
+      "GREETING": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 2
+      },
+      "IDENTITY": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 2
+      },
+      "SMALLTALK": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 2
+      }
+    },
+    "confusion_matrix": {
+      "GREETING": {
+        "GREETING": 2,
+        "IDENTITY": 0,
+        "SMALLTALK": 0
+      },
+      "IDENTITY": {
+        "GREETING": 0,
+        "IDENTITY": 2,
+        "SMALLTALK": 0
+      },
+      "SMALLTALK": {
+        "GREETING": 0,
+        "IDENTITY": 0,
+        "SMALLTALK": 2
+      }
+    }
+  },
+  "contradiction_accuracy": 0.8824,
+  "failed_cases": []
+}

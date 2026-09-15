@@ -71,8 +71,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     hydrateAuth();
 
+    const handleAuthExpired = () => {
+      setUser(null);
+      setToken(null);
+    };
+
+    window.addEventListener('sourcecheck:auth-expired', handleAuthExpired);
+
     return () => {
       isMounted = false;
+      window.removeEventListener('sourcecheck:auth-expired', handleAuthExpired);
     };
   }, []);
 

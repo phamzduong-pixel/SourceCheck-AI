@@ -75,3 +75,6 @@ logs/
 *.db
 *.sqlite
 *.sqlite3
+
+*.bak
+*.db

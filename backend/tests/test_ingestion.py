@@ -487,3 +487,200 @@ def test_api_ingest_raw_text(async_session: AsyncSession):
         app.dependency_overrides.clear()
 
 
+def test_api_get_document_success(async_session: AsyncSession):
+    """Verify GET /documents/{id} retrieves complete metadata, raw content, and chunks."""
+    async def override_get_db():
+        yield async_session
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    try:
+        client = TestClient(app)
+        # 1. Ingest a document
+        payload = {
+            "title": "Clean Energy Transition 2026",
+            "raw_content": "Solar and wind energy investments rose 15 percent globally. Grid modernization remains critical.",
+            "source_url": "https://energy.org/transition",
+            "publisher": "International Energy Agency",
+            "doc_type": "text",
+            "metadata": {"topic": "Renewables", "year": 2026},
+        }
+        create_res = client.post(f"{settings.API_V1_PREFIX}/documents/ingest", json=payload)
+        assert create_res.status_code == 201
+        doc_id = create_res.json()["data"]["id"]
+
+        # 2. Retrieve document detail
+        get_res = client.get(f"{settings.API_V1_PREFIX}/documents/{doc_id}")
+        assert get_res.status_code == 200
+        data = get_res.json()
+        assert data["success"] is True
+        doc_detail = data["data"]
+        assert doc_detail["id"] == doc_id
+        assert doc_detail["title"] == "Clean Energy Transition 2026"
+        assert doc_detail["source_url"] == "https://energy.org/transition"
+        assert doc_detail["publisher"] == "International Energy Agency"
+        assert doc_detail["doc_type"] == "txt"
+        assert doc_detail["chunk_count"] >= 1
+        assert "Solar and wind energy" in doc_detail["raw_content"]
+        assert len(doc_detail["chunks"]) >= 1
+        assert doc_detail["chunks"][0]["chunk_index"] == 0
+        assert len(doc_detail["chunks"][0]["content"]) > 0
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_api_get_document_not_found(async_session: AsyncSession):
+    """Verify GET /documents/{id} with non-existent UUID returns 404."""
+    async def override_get_db():
+        yield async_session
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    try:
+        client = TestClient(app)
+        random_id = str(uuid.uuid4())
+        response = client.get(f"{settings.API_V1_PREFIX}/documents/{random_id}")
+        assert response.status_code == 404
+        assert "not found" in response.json()["detail"].lower()
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_api_list_documents_paginated(async_session: AsyncSession):
+    """Verify GET /documents returns paginated list with total counts and chunk counts."""
+    async def override_get_db():
+        yield async_session
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    try:
+        client = TestClient(app)
+        # Ingest 2 documents
+        for i in range(1, 3):
+            client.post(
+                f"{settings.API_V1_PREFIX}/documents/ingest",
+                json={
+                    "title": f"Document {i}",
+                    "raw_content": f"Factual content for document {i} discussing fiscal measures.",
+                    "publisher": f"Publisher {i}",
+                },
+            )
+
+        # Query list
+        res = client.get(f"{settings.API_V1_PREFIX}/documents?page=1&page_size=10")
+        assert res.status_code == 200
+        data = res.json()
+        assert data["success"] is True
+        paginated = data["data"]
+        assert paginated["total"] >= 2
+        assert paginated["page"] == 1
+        assert paginated["page_size"] == 10
+        assert len(paginated["items"]) >= 2
+        first_item = paginated["items"][0]
+        assert "id" in first_item
+        assert "title" in first_item
+        assert first_item["chunk_count"] >= 1
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_api_delete_document_success(async_session: AsyncSession):
+    """Verify DELETE /documents/{id} cascades deletion to chunks and prevents orphan records."""
+    async def override_get_db():
+        yield async_session
+
+    app.dependency_overrides[get_db] = override_get_db
+
+    try:
+        client = TestClient(app)
+        # Ingest document
+        create_res = client.post(
+            f"{settings.API_V1_PREFIX}/documents/ingest",
+            json={
+                "title": "Document to be deleted",
+                "raw_content": "Temporary content that will be removed from knowledge base.",
+            },
+        )
+        doc_id = create_res.json()["data"]["id"]
+
+        # Delete document
+        del_res = client.delete(f"{settings.API_V1_PREFIX}/documents/{doc_id}")
+        assert del_res.status_code == 200
+        del_data = del_res.json()
+        assert del_data["success"] is True
+        assert del_data["data"]["document_id"] == doc_id
+
+        # Verify subsequent GET returns 404
+        get_res = client.get(f"{settings.API_V1_PREFIX}/documents/{doc_id}")
+        assert get_res.status_code == 404
+
+        # Verify deleting again returns 404
+        del_res2 = client.delete(f"{settings.API_V1_PREFIX}/documents/{doc_id}")
+        assert del_res2.status_code == 404
+    finally:
+        app.dependency_overrides.clear()
+
+
+@pytest.mark.asyncio
+async def test_delete_document_cascades_chunks_and_preserves_evidence(async_session: AsyncSession):
+    """Verify deleting a Document deletes its DocumentChunks while setting Evidence.document_chunk_id to NULL."""
+    from app.models.evidence import Evidence
+    from app.repositories.document_repository import DocumentRepository
+
+    repo = DocumentRepository(async_session)
+
+    # 1. Create a Document
+    doc = Document(
+        title="Cascade Test Document",
+        raw_content="Raw text for cascade testing.",
+        doc_type="txt",
+    )
+    await repo.create(doc)
+
+    # 2. Create a DocumentChunk
+    chunk = DocumentChunk(
+        document_id=doc.id,
+        chunk_index=0,
+        content="Chunk text to be deleted.",
+        token_count=10,
+    )
+    async_session.add(chunk)
+    await async_session.flush()
+
+    # 3. Create an Evidence record referencing the chunk
+    evidence = Evidence(
+        document_chunk_id=chunk.id,
+        snippet="Evidence snippet referencing chunk",
+        source_title="Source Title",
+    )
+    async_session.add(evidence)
+    await async_session.commit()
+
+    chunk_id = chunk.id
+    evidence_id = evidence.id
+    doc_id = doc.id
+
+    # 4. Delete the Document
+    doc_to_delete = await repo.get_by_id(doc_id)
+    assert doc_to_delete is not None
+    await repo.delete(doc_to_delete)
+    await async_session.commit()
+
+    # 5. Assert Document is deleted
+    assert await repo.get_by_id(doc_id) is None
+
+    # 6. Assert DocumentChunk is deleted (cascade)
+    chunk_res = await async_session.execute(
+        select(DocumentChunk).where(DocumentChunk.id == chunk_id)
+    )
+    assert chunk_res.scalar_one_or_none() is None
+
+    # 7. Assert Evidence record is preserved and document_chunk_id set to None
+    ev_res = await async_session.execute(
+        select(Evidence).where(Evidence.id == evidence_id)
+    )
+    saved_evidence = ev_res.scalar_one_or_none()
+    assert saved_evidence is not None
+    assert saved_evidence.document_chunk_id is None
+
+

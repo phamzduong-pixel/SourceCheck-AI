@@ -3,6 +3,7 @@
  */
 
 import React from 'react';
+import { useAIPreferences } from '../../hooks/useAIPreferences';
 
 interface GoogleButtonProps {
   onClick: () => void;
@@ -15,18 +16,19 @@ export const GoogleButton: React.FC<GoogleButtonProps> = ({
   disabled = false,
   isLoading = false,
 }) => {
+  const { t } = useAIPreferences();
   return (
     <button
       type="button"
       className="auth-btn-google"
       onClick={onClick}
       disabled={disabled || isLoading}
-      aria-label="Continue with Google"
+      aria-label={t('auth.continueGoogle')}
     >
       {isLoading ? (
         <>
           <span className="spinner spinner-dark" />
-          <span>Connecting to Google...</span>
+          <span>{t('auth.connectingGoogle')}</span>
         </>
       ) : (
         <>
@@ -54,7 +56,7 @@ export const GoogleButton: React.FC<GoogleButtonProps> = ({
               fill="#EA4335"
             />
           </svg>
-          <span>Continue with Google</span>
+          <span>{t('auth.continueGoogle')}</span>
         </>
       )}
     </button>
