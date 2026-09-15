@@ -3,7 +3,7 @@
 **Hệ thống thẩm định thông tin và đối soát nguồn tự động (Automated Fact-Checking & Source Verification System)**
 
 [![Backend Tests](https://img.shields.io/badge/Backend%20Tests-249%2B%20Passed-brightgreen)](#)
-[![Frontend Tests](https://img.shields.io/badge/Frontend%20Tests-162%20Passed-brightgreen)](#)
+[![Frontend Tests](https://img.shields.io/badge/Frontend%20Tests-166%20Passed-brightgreen)](#)
 [![Evaluation Benchmark](https://img.shields.io/badge/Evaluation-28%2F28%20Passed%20(100%25)-brightgreen)](#)
 [![Python](https://img.shields.io/badge/Python-3.10%2B-blue)](#)
 [![React](https://img.shields.io/badge/React-18%20%2B%20TypeScript-61dafb)](#)
@@ -65,11 +65,14 @@ User Input / Query
 ## 2. Các Phân hệ Chức năng Chính (System Modules)
 
 ### 2.1. Không gian Tra cứu Nghiên cứu (Research Chat Assistant — `/chat` hoặc `/`)
-- **Tra cứu tức thì & Gợi ý chủ đề**: Giao diện hội thoại thông minh phong cách Perplexity với các thẻ gợi ý câu hỏi mẫu (Prompt Starters).
+- **Tra cứu tức thì & Gợi ý chủ đề**: Giao diện hội thoại thông minh phong cách ChatGPT / DeepSeek / Perplexity với các thẻ gợi ý câu hỏi mẫu (Prompt Starters).
+- **Trải nghiệm Hội thoại Đỉnh cao (Balanced Chat UX)**: Căn chỉnh trục dọc thẳng hàng tuyệt đối (balanced left-rail) giữa tin nhắn người dùng và phản hồi AI với avatar 34x34px, khung chat tối đa 820px, loại bỏ hoàn toàn hiện tượng lệch mép.
+- **Sticky Top Header & Tên cuộc trò chuyện**: Thanh Header cố định ở trên cùng viewport (`position: sticky; top: 0;`), tự động hiển thị tên tóm tắt cuộc trò chuyện kèm badge `● Grounded` và nút **"+ Tra cứu mới"** luôn đứng yên khi cuộn qua các câu trả lời dài.
 - **Hội thoại Đa lượt (Multi-turn Conversation)**: Lưu trữ lịch sử `User -> Conversation -> Message`, tự động viết lại câu hỏi nối tiếp thông qua **Contextual Query Rewriter**.
 - **Ngăn Minh chứng Trượt (Evidence Drawer)**: Chú thích số tương tác `[1]`, `[2]`, bấm để mở ngăn trượt bên phải hiển thị trích dẫn nguyên văn, nguồn xuất bản, URL và độ tương đồng ngữ nghĩa.
 - **Phân rã Luận điểm & Độ phủ Bằng chứng (Claims Breakdown & Coverage)**: Trực quan hóa từng nhận định thành phần và tỷ lệ phần trăm dữ liệu được bảo chứng.
 - **Intent Router**: Tự động nhận diện và phản hồi tức thì các câu chào hỏi (`hello`, `xin chào`) hoặc câu hỏi danh tính (`bạn là ai`) mà không kích hoạt RAG.
+- **Giao diện Tối giản Graylight / Matte Charcoal**: Tông màu xám than sang trọng, hỗ trợ chuyển đổi mượt mà Light Mode (`#f9f9fb`) và Dark Mode (`#212121`).
 
 ### 2.2. Không gian Thẩm định Chuyên sâu (Fact-Checking Workspace — `/fact-check`)
 - **Quy trình Kiểm chứng Đa tầng**: Tiếp nhận văn bản/tin tức phức tạp, tự động bóc tách các claims độc lập và truy vấn kho tri thức đối soát chéo.
@@ -96,13 +99,13 @@ SourceCheck-AI/
 ├── frontend/                     # Giao diện người dùng (React 18 + TypeScript + Vite)
 │   ├── src/
 │   │   ├── components/           # UI components (auth, layout, qa, factCheck, documents, search, dashboard)
-│   │   ├── context/              # AuthContext (quản lý state đăng nhập toàn cục)
-│   │   ├── hooks/                # useAuth hook
+│   │   ├── context/              # AuthContext, AIPreferencesContext
+│   │   ├── hooks/                # useAuth, useAIPreferences hooks
 │   │   ├── i18n/                 # Đa ngôn ngữ độc lập: UI (vi/en) & AI Model (vi/en)
 │   │   ├── pages/                # ResearchChatPage, FactCheckPage, DocumentsPage, SearchExplorerPage, DashboardPage, LoginPage, RegisterPage
-│   │   ├── services/             # apiClient, auth, qa, verification, documents, search, dashboard
-│   │   ├── styles/               # Theme tokens & stylesheet cho từng phân hệ
-│   │   └── test/                 # 162 unit & integration tests (Vitest)
+│   │   ├── services/             # apiClient, auth, qa, verification, documents, search, dashboard, system
+│   │   ├── styles/               # Theme tokens & stylesheet cho từng phân hệ (layout, chat, documents, dashboard, search, factcheck)
+│   │   └── test/                 # 166 unit & integration tests (Vitest)
 │   └── vite.config.ts            # Cấu hình Vite & API reverse proxy
 │
 ├── backend/                      # Ứng dụng backend xử lý nghiệp vụ (FastAPI)
@@ -182,7 +185,7 @@ Xem chi tiết kịch bản 8 bước trình diễn sản phẩm tại: [Demo Pr
 ## 5. Kết quả Thực nghiệm & Kiểm thử (Verification & Metrics)
 
 ### 5.1. Automated Test Suites
-- **Frontend Test Suite**: **162 / 162 tests passed (100%)** trên 9 test suites (`apiClient`, `chat`, `qa`, `auth`, `factCheck`, `layout`, `documents`, `search`, `dashboard`).
+- **Frontend Test Suite**: **166 / 166 tests passed (100%)** trên 9 test suites (`apiClient`, `chat`, `qa`, `auth`, `factCheck`, `layout`, `documents`, `search`, `dashboard`).
 - **Frontend Production Build**: `tsc && vite build` hoàn thành với **0 lỗi TypeScript / lint**.
 - **Backend Test Suite**: **249+ tests passed** trên toàn bộ các domain AI, Q&A, Ingestion, Retrieval, Verification, Conversation, Search, và Auth.
 

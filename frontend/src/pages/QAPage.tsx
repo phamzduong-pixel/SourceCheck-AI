@@ -100,7 +100,7 @@ export const QAPage: React.FC = () => {
           onChange={(e) => setQuestion(e.target.value)}
           onKeyDown={handleKeyDown}
           disabled={isLoading}
-          rows={3}
+          rows={2}
           aria-label="Nhập câu hỏi"
           data-testid="question-textarea"
         />
@@ -154,7 +154,7 @@ export const QAPage: React.FC = () => {
       {/* Loading State Skeleton */}
       {isLoading && (
         <div className="qa-loading-card" data-testid="qa-loading-state">
-          <div className="spinner" style={{ width: '36px', height: '36px', borderWidth: '3px', borderTopColor: '#2563eb' }} />
+          <div className="spinner" style={{ width: '36px', height: '36px', borderWidth: '3px', borderTopColor: 'var(--color-primary)' }} />
           <p className="qa-loading-text">
             {t('qa.loadingTitle')}
           </p>
@@ -168,7 +168,7 @@ export const QAPage: React.FC = () => {
           <div className="qa-answer-card">
             <div className="answer-card-header">
               <h2 className="answer-card-title">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                   <path d="m9 12 2 2 4-4" />
                 </svg>
@@ -197,6 +197,7 @@ export const QAPage: React.FC = () => {
               coverage={result.evidence_coverage}
               status={result.status}
               summary={result.verification_summary}
+              totalClaims={result.claims?.length}
             />
           )}
 

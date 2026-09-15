@@ -46,7 +46,9 @@ class VerificationService:
 
 
     async def verify_text(
-        self, request: VerificationCreateRequest
+        self,
+        request: VerificationCreateRequest,
+        session: Optional[Any] = None,
     ) -> VerificationResultResponse:
         """Run full verification pipeline."""
         req_id = uuid.uuid4()
@@ -57,7 +59,7 @@ class VerificationService:
 
         # 2. Match evidence for each claim (hybrid search + cross-encoder rerank)
         matched_evidence = await self.evidence_matcher.match_evidence_for_claims(
-            claims, top_k=request.top_k_evidence
+            claims, top_k=request.top_k_evidence, session=session
         )
 
         # 3. Verify each claim with matched evidence
@@ -78,17 +80,29 @@ class VerificationService:
         if all_evidences:
             self.faithfulness_checker.check_faithfulness(request.text, all_evidences)
 
-        # 6. Determine overall verdict
-        if not verified_claims:
+        # 6. Determine overall verdict & calculate evidence coverage
+        supported_count = sum(1 for c in verified_claims if c.verdict in ("SUPPORTED", "PARTIALLY_SUPPORTED"))
+        refuted_count = sum(1 for c in verified_claims if c.verdict == "REFUTED")
+        nei_count = sum(1 for c in verified_claims if c.verdict == "NOT_ENOUGH_INFO")
+
+        if not verified_claims or nei_count == len(verified_claims):
             overall = "UNVERIFIED"
-        elif all(c.verdict == "SUPPORTED" for c in verified_claims):
-            overall = "TRUE"
-        elif all(c.verdict == "REFUTED" for c in verified_claims):
+        elif supported_count > 0 and refuted_count == 0:
+            overall = "TRUE" if supported_count == len(verified_claims) else "SUPPORTED"
+        elif refuted_count > 0 and supported_count == 0:
             overall = "FALSE"
         else:
             overall = "MIXED"
 
-        summary_text = f"Processed {len(verified_claims)} claim(s). Verdict: {overall}."
+        coverage_metrics = self.coverage_calculator.calculate_coverage(verified_claims)
+        cov_pct = int(coverage_metrics.get("coverage_rate", 0.0) * 100)
+
+        summary_text = (
+            f"Processed {len(verified_claims)} claim(s): "
+            f"{supported_count} SUPPORTED, {refuted_count} REFUTED, {nei_count} NOT_ENOUGH_INFO. "
+            f"Evidence Coverage: {cov_pct}%. Verdict: {overall}."
+        )
+
         # 7. Format inline citations / references
         if all_evidences:
             summary_text = self.citation_service.format_inline_citations(

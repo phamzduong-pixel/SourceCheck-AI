@@ -68,14 +68,12 @@ async def ask_question(
             conversation_history=history_text,
         )
 
-        # 3. Conversational intents must also have durable conversation history.
-        # The frontend normally creates the conversation first, but keep the API
-        # correct when a new greeting arrives without a conversation_id.
-        intent_type = final_answer.metadata.get("intent")
-        if conversation is None and intent_type in {"GREETING", "IDENTITY", "SMALLTALK"}:
+        # 3. Ensure a conversation exists for durable persistence
+        if conversation is None:
             title = request.question.strip()[:48] or "New conversation"
             conversation = await ConversationRepository.create(db, current_user.id, title=title)
-            final_answer.metadata["conversation_id"] = str(conversation.id)
+        
+        final_answer.metadata["conversation_id"] = str(conversation.id)
 
         # 4. Persist messages when a conversation is available.
         if conversation is not None:

@@ -237,11 +237,8 @@ describe("App Shell & Layout (FE-02, FE-04.2.1 & FE-04.2.2)", () => {
         }),
       );
       await waitFor(() => {
-        const placeholderFc = screen.getByTestId("placeholder-fact-check");
-        expect(placeholderFc).toBeInTheDocument();
-        expect(
-          within(placeholderFc).getByText("Fact-Checking"),
-        ).toBeInTheDocument();
+        const fcPage = screen.getByTestId("fact-check-page");
+        expect(fcPage).toBeInTheDocument();
       });
 
       // Click Documents
@@ -249,11 +246,8 @@ describe("App Shell & Layout (FE-02, FE-04.2.1 & FE-04.2.2)", () => {
         within(sidebarNav).getByRole("link", { name: /tài liệu|documents/i }),
       );
       await waitFor(() => {
-        const placeholderDoc = screen.getByTestId("placeholder-documents");
-        expect(placeholderDoc).toBeInTheDocument();
-        expect(
-          within(placeholderDoc).getByText("Documents"),
-        ).toBeInTheDocument();
+        const docPage = screen.getByTestId("documents-page");
+        expect(docPage).toBeInTheDocument();
       });
     });
   });

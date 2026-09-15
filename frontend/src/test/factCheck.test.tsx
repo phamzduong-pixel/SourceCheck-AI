@@ -93,7 +93,7 @@ describe('Fact-Checking Feature (FE-04.1)', () => {
 
       // Verify Header
       expect(screen.getByText(/kiểm chứng thông tin|fact-checking/i)).toBeInTheDocument();
-      expect(screen.getByText(/kiểm chứng tính xác thực của nội dung/i)).toBeInTheDocument();
+      expect(screen.getByText(/kiểm chứng nhận định dựa trên|kiểm chứng tính xác thực/i)).toBeInTheDocument();
 
       // Verify Composer
       expect(screen.getByTestId('factcheck-textarea')).toBeInTheDocument();
@@ -1125,6 +1125,19 @@ describe('Fact-Checking Feature (FE-04.1)', () => {
 
       // Overall Verdict
       expect(screen.getByTestId('overall-verdict-badge')).toHaveTextContent(/MIXED/i);
+
+      // Verification Report overview & coverage card
+      expect(screen.getByTestId('verification-report')).toBeInTheDocument();
+      expect(screen.getByTestId('report-coverage-card')).toBeInTheDocument();
+      expect(screen.getByTestId('report-coverage-percentage')).toHaveTextContent('75%');
+      expect(screen.getByTestId('report-stat-ratio')).toHaveTextContent('Đối soát: 3/4 nhận định');
+      expect(screen.getByTestId('report-stat-supported')).toHaveTextContent('Supported: 1');
+      expect(screen.getByTestId('report-stat-partially')).toHaveTextContent('Partially: 1');
+      expect(screen.getByTestId('report-stat-refuted')).toHaveTextContent('Refuted: 1');
+      expect(screen.getByTestId('report-stat-not-enough-info')).toHaveTextContent('Not Enough Info: 1');
+
+      // Contradiction alert banner should be rendered
+      expect(screen.getByTestId('contradiction-alert-banner')).toBeInTheDocument();
 
       // Claim 1: SUPPORTED
       expect(screen.getByTestId('claim-verdict-claim-c1')).toHaveTextContent(/SUPPORTED/i);

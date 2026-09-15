@@ -19,7 +19,7 @@ def get_embedding_service() -> EmbeddingService:
 
 def get_ingestion_service() -> IngestionService:
     """Provide IngestionService instance."""
-    return IngestionService()
+    return IngestionService(embedding_service=EmbeddingService())
 
 
 def get_retrieval_service() -> RetrievalService:

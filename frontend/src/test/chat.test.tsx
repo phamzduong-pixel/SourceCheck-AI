@@ -198,7 +198,7 @@ describe('Main Research Chat Feature (FE-CHAT-01)', () => {
         screen.getByText(/Bạn muốn tìm hiểu hoặc đối soát điều gì hôm nay\?|What would you like to research/i)
       ).toBeInTheDocument();
       expect(
-        screen.getByText(/Hệ thống AI đối soát nguồn minh bạch/i)
+        screen.getByText(/Trợ lý nghiên cứu AI với trích dẫn minh bạch|Hệ thống AI đối soát nguồn minh bạch/i)
       ).toBeInTheDocument();
 
       // Centered Composer

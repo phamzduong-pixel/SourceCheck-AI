@@ -45,9 +45,9 @@ export const VerificationDistributionCard: React.FC<VerificationDistributionCard
           <div className="distribution-meta">
             <div className="distribution-label-wrapper">
               <span className="distribution-dot supported" />
-              <span>{t('dashboard.supported')}</span>
+              <span className="distribution-label-text">{t('dashboard.supported')}</span>
             </div>
-            <div>
+            <div className="distribution-count-group">
               <span className="distribution-count" data-testid="dist-count-supported">
                 {supported}
               </span>
@@ -68,9 +68,9 @@ export const VerificationDistributionCard: React.FC<VerificationDistributionCard
           <div className="distribution-meta">
             <div className="distribution-label-wrapper">
               <span className="distribution-dot partially-supported" />
-              <span>{t('dashboard.partiallySupported')}</span>
+              <span className="distribution-label-text">{t('dashboard.partiallySupported')}</span>
             </div>
-            <div>
+            <div className="distribution-count-group">
               <span className="distribution-count" data-testid="dist-count-partially-supported">
                 {partially}
               </span>
@@ -91,9 +91,9 @@ export const VerificationDistributionCard: React.FC<VerificationDistributionCard
           <div className="distribution-meta">
             <div className="distribution-label-wrapper">
               <span className="distribution-dot refuted" />
-              <span>{t('dashboard.refuted')}</span>
+              <span className="distribution-label-text">{t('dashboard.refuted')}</span>
             </div>
-            <div>
+            <div className="distribution-count-group">
               <span className="distribution-count" data-testid="dist-count-refuted">
                 {refuted}
               </span>
@@ -114,9 +114,9 @@ export const VerificationDistributionCard: React.FC<VerificationDistributionCard
           <div className="distribution-meta">
             <div className="distribution-label-wrapper">
               <span className="distribution-dot not-enough-info" />
-              <span>{t('dashboard.notEnoughInfo')}</span>
+              <span className="distribution-label-text">{t('dashboard.notEnoughInfo')}</span>
             </div>
-            <div>
+            <div className="distribution-count-group">
               <span className="distribution-count" data-testid="dist-count-not-enough-info">
                 {notEnough}
               </span>

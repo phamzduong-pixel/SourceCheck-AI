@@ -28,6 +28,9 @@ export interface AIPreferencesContextType {
   theme: ThemeMode;
   setTheme: (theme: ThemeMode) => void;
   toggleTheme: () => void;
+  // Active Chat Title (for sticky AppHeader display)
+  activeChatTitle: string | null;
+  setActiveChatTitle: (title: string | null) => void;
   // Translation helper
   t: (key: TranslationKey, params?: Record<string, string | number>) => string;
 }
@@ -40,6 +43,8 @@ const defaultContextValue: AIPreferencesContextType = {
   theme: 'light',
   setTheme: () => {},
   toggleTheme: () => {},
+  activeChatTitle: null,
+  setActiveChatTitle: () => {},
   t: (key, params) => translate(key, 'vi', params),
 };
 
@@ -136,6 +141,9 @@ export const AIPreferencesProvider: React.FC<{ children: React.ReactNode }> = ({
     [uiLanguage]
   );
 
+  // 4. Active Chat Title State
+  const [activeChatTitle, setActiveChatTitle] = useState<string | null>(null);
+
   // Sync DOM data-theme attribute with state
   useEffect(() => {
     if (typeof document !== 'undefined') {
@@ -160,6 +168,8 @@ export const AIPreferencesProvider: React.FC<{ children: React.ReactNode }> = ({
         theme,
         setTheme,
         toggleTheme,
+        activeChatTitle,
+        setActiveChatTitle,
         t,
       }}
     >

@@ -61,7 +61,7 @@ class CrossEncoderReranker(BaseReranker):
         
         Evaluates:
         1. Exact phrase matching bonus
-        2. Query token coverage ratio (Jaccard / intersection)
+        2. Query token coverage ratio (Jaccard / intersection) with stem prefix matching
         3. Term order / bigram preservation
         4. Technical code matching
         """
@@ -78,15 +78,30 @@ class CrossEncoderReranker(BaseReranker):
             score += 0.50
 
         # Tokenize words & technical identifiers
-        q_tokens = re.findall(r"[\w\d\.\/\%\-]+", q_clean)
+        q_all = re.findall(r"[\w\d\.\/\%\-]+", q_clean)
         c_tokens = set(re.findall(r"[\w\d\.\/\%\-]+", c_clean))
 
-        if not q_tokens:
+        if not q_all:
             return 0.0
 
-        # Token overlap ratio
-        matched_tokens = [t for t in q_tokens if t in c_tokens]
-        coverage_ratio = len(matched_tokens) / len(q_tokens)
+        # Filter stop words to evaluate factual content words
+        stop_words = {
+            "the", "a", "an", "in", "on", "of", "to", "is", "are", "was", "were", "been", "be",
+            "and", "or", "for", "with", "by", "as", "at", "from", "that", "this", "it", "its",
+            "của", "và", "các", "có", "được", "là", "trong", "cho", "với", "ở", "về", "từ",
+        }
+        q_content = [t for t in q_all if t not in stop_words and len(t) > 1]
+        q_tokens = q_content if q_content else q_all
+
+        # Token overlap ratio with prefix stem matching for paraphrased variants
+        matched_tokens = 0.0
+        for t in q_tokens:
+            if t in c_tokens:
+                matched_tokens += 1.0
+            elif len(t) >= 4 and any(ct.startswith(t[:4]) or t.startswith(ct[:4]) for ct in c_tokens if len(ct) >= 4):
+                matched_tokens += 0.85
+
+        coverage_ratio = min(1.0, matched_tokens / len(q_tokens))
         score += coverage_ratio * 0.40
 
         # Bigram coherence
@@ -123,13 +138,23 @@ class CrossEncoderReranker(BaseReranker):
             except Exception as exc:
                 logger.error(f"CrossEncoder inference failed: {exc}. Using fallback.")
                 scored_candidates = [
-                    (self._fallback_cross_score(query, hit.content), hit)
+                    (
+                        max(
+                            self._fallback_cross_score(query, hit.content),
+                            getattr(hit, "vector_score", 0.0) or 0.0,
+                            hit.score if hit.retriever_type == "vector" else 0.0,
+                        ),
+                        hit,
+                    )
                     for hit in candidates
                 ]
         else:
             # Deterministic fallback engine
             scored_candidates = [
-                (self._fallback_cross_score(query, hit.content), hit)
+                (
+                    self._fallback_cross_score(query, hit.content),
+                    hit,
+                )
                 for hit in candidates
             ]
 

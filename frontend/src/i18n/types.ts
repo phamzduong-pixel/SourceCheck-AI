@@ -78,6 +78,20 @@ export interface TranslationDictionary {
   'dashboard.cardSearchTitle': string;
   'dashboard.cardSearchDesc': string;
   'dashboard.cardSearchAction': string;
+  'dashboard.healthTitle': string;
+  'dashboard.healthDesc': string;
+  'dashboard.healthStatusHealthy': string;
+  'dashboard.healthStatusDegraded': string;
+  'dashboard.healthStatusUnavailable': string;
+  'dashboard.healthStatusUnknown': string;
+  'dashboard.healthComponentBackend': string;
+  'dashboard.healthComponentDb': string;
+  'dashboard.healthComponentVector': string;
+  'dashboard.healthComponentLlm': string;
+  'dashboard.healthComponentEmbedding': string;
+  'dashboard.healthComponentReranker': string;
+  'dashboard.healthLastChecked': string;
+  'dashboard.healthRefreshing': string;
 
   // Grounded Q&A Page
   'qa.pageTitle': string;

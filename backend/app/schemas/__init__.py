@@ -40,6 +40,10 @@ from app.schemas.dashboard import (
     EvaluationSummary,
     DashboardStatsResponse,
 )
+from app.schemas.health import (
+    DependencyHealth,
+    SystemHealthResponse,
+)
 
 __all__ = [
     "APIResponse",
@@ -78,5 +82,7 @@ __all__ = [
     "RecentActivityItem",
     "EvaluationSummary",
     "DashboardStatsResponse",
+    "DependencyHealth",
+    "SystemHealthResponse",
 ]
 

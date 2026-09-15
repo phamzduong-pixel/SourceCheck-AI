@@ -66,9 +66,10 @@ class EvidenceCoverageCalculator:
                     with_evidence += 1
                 conf_sum += c.confidence
             else:
-                if len(c.evidences) > 0:
+                verdict_str = str(getattr(c, "verdict", "")).upper()
+                if verdict_str in ("SUPPORTED", "PARTIALLY_SUPPORTED", "REFUTED") or (verdict_str not in ("NOT_ENOUGH_INFO", "UNVERIFIED") and len(getattr(c, "evidences", [])) > 0):
                     with_evidence += 1
-                conf_sum += c.confidence_score
+                conf_sum += getattr(c, "confidence_score", 0.0)
 
         return {
             "coverage_rate": round(with_evidence / total, 2),

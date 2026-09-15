@@ -9,6 +9,7 @@ import { VerificationResultResponse, ClaimExtractResponse, VerificationEvidenceI
 import { ApiClientError } from '../services/apiClient';
 import { useAIPreferences } from '../hooks/useAIPreferences';
 import { FactCheckEvidenceDrawer } from '../components/factCheck/FactCheckEvidenceDrawer';
+import { VerificationReport } from '../components/factCheck/VerificationReport';
 import '../styles/factCheck.css';
 
 const SAMPLE_CLAIMS = [
@@ -133,9 +134,6 @@ export const FactCheckPage: React.FC = () => {
     setActiveTab('verify');
   };
 
-  const overallVerdict = result?.overall_verdict || 'UNVERIFIED';
-  const verdictClass = overallVerdict.toLowerCase();
-
   return (
     <div className="factcheck-container" data-testid="fact-check-page">
       {/* Page Header */}
@@ -199,7 +197,7 @@ export const FactCheckPage: React.FC = () => {
                 }
               }}
               disabled={isLoading}
-              rows={3}
+              rows={2}
               aria-label="Nội dung cần kiểm chứng"
               data-testid="factcheck-textarea"
             />
@@ -270,7 +268,7 @@ export const FactCheckPage: React.FC = () => {
           {/* Loading State */}
           {isLoading && (
             <div className="verify-loading-card" data-testid="verify-loading-state">
-              <div className="spinner" style={{ width: '36px', height: '36px', borderWidth: '3px', borderTopColor: '#2563eb' }} />
+              <div className="spinner" style={{ width: '36px', height: '36px', borderWidth: '3px', borderTopColor: 'var(--color-primary)' }} />
               <p className="verify-loading-text">
                 Đang trích xuất nhận định, truy xuất bằng chứng và phân tích lập trường...
               </p>
@@ -319,264 +317,13 @@ export const FactCheckPage: React.FC = () => {
             </div>
           )}
 
-          {/* Results Section */}
+          {/* Results Section (FE-04) */}
           {result && !isLoading && (
             <div className="verify-results-container" data-testid="verify-results-container">
-              {/* Overall Verdict Card */}
-              <div className="overall-verdict-card" data-testid="overall-verdict-card">
-                <div className="overall-verdict-header">
-                  <h2 className="overall-verdict-title">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                      <path d="m9 12 2 2 4-4" />
-                    </svg>
-                    <span>Kết luận kiểm chứng tổng thể</span>
-                  </h2>
-
-                  <span className={`verdict-badge ${verdictClass}`} data-testid="overall-verdict-badge">
-                    ● {overallVerdict}
-                  </span>
-                </div>
-
-                {result.summary && (
-                  <p className="overall-summary" data-testid="overall-summary-text">
-                    {result.summary}
-                  </p>
-                )}
-
-                <div className="result-meta-row">
-                  <span className="meta-item" data-testid="meta-request-id">
-                    Mã yêu cầu: {result.request_id}
-                  </span>
-                  <span className="meta-item" data-testid="meta-status">
-                    Trạng thái: {result.status}
-                  </span>
-                  <span className="meta-item" data-testid="meta-claims-count">
-                    Số nhận định: {result.claims_count ?? result.claims?.length ?? 0}
-                  </span>
-                  {result.created_at && (
-                    <span className="meta-item" data-testid="meta-created-at">
-                      Thời gian: {new Date(result.created_at).toLocaleString('vi-VN')}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Verified Claims Section */}
-              <div className="verified-claims-section" data-testid="verified-claims-section">
-                <div className="verified-claims-header">
-                  <span>Danh sách nhận định đã xác minh</span>
-                  <span className="claims-count-tag" data-testid="claims-count-tag">
-                    {result.claims?.length || 0} claims
-                  </span>
-                </div>
-
-                {result.claims && result.claims.length > 0 ? (
-                  <div className="claims-cards-list" data-testid="verified-claims-list">
-                    {result.claims.map((claim, idx) => {
-                      const claimKey = claim.claim_id || `claim-${idx + 1}`;
-                      const claimVerdict = claim.verdict || 'UNVERIFIED';
-                      const claimVerdictClass = claimVerdict.toLowerCase();
-
-                      return (
-                        <div
-                          key={claimKey}
-                          className="claim-card"
-                          data-testid={`verified-claim-${claimKey}`}
-                        >
-                          <div className="claim-card-top">
-                            <span className="claim-order-num">#{idx + 1}</span>
-                            <p className="claim-card-text" data-testid={`claim-text-${claimKey}`}>
-                              {claim.claim_text}
-                            </p>
-                            <div className="claim-card-badges">
-                              <span
-                                className={`claim-verdict-tag ${claimVerdictClass}`}
-                                data-testid={`claim-verdict-${claimKey}`}
-                              >
-                                ● {claimVerdict}
-                              </span>
-                              {typeof claim.confidence_score === 'number' && (
-                                <span
-                                  className="claim-confidence-tag"
-                                  data-testid={`claim-confidence-${claimKey}`}
-                                >
-                                  Độ tin cậy: {Math.round(claim.confidence_score * 100)}%
-                                </span>
-                              )}
-                            </div>
-                          </div>
-
-                          {claim.explanation && (
-                            <div
-                              className="claim-explanation-box"
-                              data-testid={`claim-explanation-${claimKey}`}
-                            >
-                              <strong>Giải thích:</strong> {claim.explanation}
-                            </div>
-                          )}
-
-                          {/* Evidence attached to claim */}
-                          <div
-                            className="claim-evidences-box"
-                            data-testid={`claim-evidences-${claimKey}`}
-                          >
-                            <span className="claim-evidences-title">
-                              Bằng chứng đối chiếu ({claim.evidences?.length || 0}):
-                            </span>
-
-                            {claim.evidences && claim.evidences.length > 0 ? (
-                              <div className="claim-evidences-grouped">
-                                {(['SUPPORTS', 'REFUTES', 'NEUTRAL'] as const).map((targetStance) => {
-                                  const matchingEvidences = claim.evidences.filter(
-                                    (e) => (e.stance || 'NEUTRAL').toUpperCase() === targetStance
-                                  );
-                                  if (matchingEvidences.length === 0) return null;
-
-                                  const stanceLabel =
-                                    targetStance === 'SUPPORTS'
-                                      ? 'Ủng hộ (Supports)'
-                                      : targetStance === 'REFUTES'
-                                      ? 'Mâu thuẫn / Phản bác (Refutes / Contradicts)'
-                                      : 'Trung lập / Bối cảnh (Neutral)';
-
-                                  return (
-                                    <div
-                                      key={targetStance}
-                                      className="stance-group"
-                                      data-testid={`stance-group-${claimKey}-${targetStance.toLowerCase()}`}
-                                    >
-                                      <div className="stance-group-header">
-                                        <span className={`stance-pill ${targetStance.toLowerCase()}`}>
-                                          ● {targetStance}
-                                        </span>
-                                        <span>{stanceLabel}</span>
-                                        <span className="stance-group-count">
-                                          {matchingEvidences.length}
-                                        </span>
-                                      </div>
-
-                                      {matchingEvidences.map((ev) => {
-                                        const globalEvIdx = claim.evidences.indexOf(ev);
-                                        const stanceClass = (ev.stance || 'neutral').toLowerCase();
-
-                                        return (
-                                          <div
-                                            key={ev.evidence_id || `ev-${claimKey}-${globalEvIdx}`}
-                                            className={`evidence-item-card clickable ${stanceClass}`}
-                                            data-testid={`claim-evidence-${claimKey}-${globalEvIdx}`}
-                                            onClick={() => handleOpenEvidence(ev, claim.claim_text)}
-                                          >
-                                            <div className="evidence-item-top">
-                                              {ev.stance && (
-                                                <span
-                                                  className={`stance-pill ${stanceClass}`}
-                                                  data-testid={`evidence-stance-${claimKey}-${globalEvIdx}`}
-                                                >
-                                                  {ev.stance}
-                                                </span>
-                                              )}
-                                              <span className="evidence-source-title">{ev.source_title}</span>
-                                              {ev.source_url && (
-                                                <a
-                                                  href={ev.source_url}
-                                                  target="_blank"
-                                                  rel="noopener noreferrer"
-                                                  className="evidence-source-link"
-                                                  onClick={(e) => e.stopPropagation()}
-                                                  data-testid={`evidence-source-url-${claimKey}-${globalEvIdx}`}
-                                                >
-                                                  Xem nguồn &rarr;
-                                                </a>
-                                              )}
-                                            </div>
-
-                                            {(ev.quote || ev.snippet) && (
-                                              <p className="evidence-quote-snippet">
-                                                &ldquo;{ev.quote || ev.snippet}&rdquo;
-                                              </p>
-                                            )}
-
-                                            <div className="evidence-actions-bar">
-                                              <button
-                                                type="button"
-                                                className="btn-inspect-evidence"
-                                                onClick={(e) => {
-                                                  e.stopPropagation();
-                                                  handleOpenEvidence(ev, claim.claim_text);
-                                                }}
-                                                data-testid={`btn-inspect-evidence-${claimKey}-${globalEvIdx}`}
-                                                aria-label="Xem chi tiết bằng chứng"
-                                              >
-                                                <span>Xem chi tiết đối chiếu</span>
-                                                <span>&rarr;</span>
-                                              </button>
-
-                                              {typeof ev.relevance_score === 'number' && ev.relevance_score > 0 && (
-                                                <span className="evidence-relevance-score">
-                                                  Độ khớp: {Math.round(ev.relevance_score * 100)}%
-                                                </span>
-                                              )}
-                                            </div>
-                                          </div>
-                                        );
-                                      })}
-                                    </div>
-                                  );
-                                })}
-
-                                {/* Other unclassified stances if backend returns custom stance */}
-                                {claim.evidences
-                                  .filter(
-                                    (e) =>
-                                      !['SUPPORTS', 'REFUTES', 'NEUTRAL'].includes(
-                                        (e.stance || '').toUpperCase()
-                                      )
-                                  )
-                                  .map((ev) => {
-                                    const globalEvIdx = claim.evidences.indexOf(ev);
-                                    return (
-                                      <div
-                                        key={ev.evidence_id || `ev-other-${claimKey}-${globalEvIdx}`}
-                                        className="evidence-item-card clickable neutral"
-                                        data-testid={`claim-evidence-${claimKey}-${globalEvIdx}`}
-                                        onClick={() => handleOpenEvidence(ev, claim.claim_text)}
-                                      >
-                                        <div className="evidence-item-top">
-                                          <span className="stance-pill neutral">{ev.stance}</span>
-                                          <span className="evidence-source-title">{ev.source_title}</span>
-                                        </div>
-                                        {(ev.quote || ev.snippet) && (
-                                          <p className="evidence-quote-snippet">
-                                            &ldquo;{ev.quote || ev.snippet}&rdquo;
-                                          </p>
-                                        )}
-                                      </div>
-                                    );
-                                  })}
-                              </div>
-                            ) : (
-                              <span
-                                className="claim-no-evidence-text"
-                                data-testid={`claim-no-evidence-${claimKey}`}
-                              >
-                                Không có bằng chứng trực tiếp đính kèm
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div
-                    style={{ textAlign: 'center', padding: '1.5rem', color: 'var(--color-text-muted)', fontSize: '0.9rem' }}
-                    data-testid="empty-claims-notice"
-                  >
-                    Không có nhận định độc lập nào được trích xuất từ nội dung đã nhập.
-                  </div>
-                )}
-              </div>
+              <VerificationReport
+                result={result}
+                onOpenEvidence={handleOpenEvidence}
+              />
             </div>
           )}
         </>
@@ -601,7 +348,7 @@ export const FactCheckPage: React.FC = () => {
                 }
               }}
               disabled={isExtracting}
-              rows={4}
+              rows={2}
               aria-label="Đoạn văn bản cần trích xuất nhận định"
               data-testid="extract-textarea"
             />
@@ -658,7 +405,7 @@ export const FactCheckPage: React.FC = () => {
           {/* Extract Loading State */}
           {isExtracting && (
             <div className="verify-loading-card" data-testid="extract-loading-state">
-              <div className="spinner" style={{ width: '36px', height: '36px', borderWidth: '3px', borderTopColor: '#2563eb' }} />
+              <div className="spinner" style={{ width: '36px', height: '36px', borderWidth: '3px', borderTopColor: 'var(--color-primary)' }} />
               <p className="verify-loading-text">
                 Đang phân tích cấu trúc ngữ nghĩa và trích xuất các nhận định độc lập (Atomic Claims)...
               </p>
@@ -713,7 +460,7 @@ export const FactCheckPage: React.FC = () => {
             <div className="extracted-claims-section" data-testid="extract-results-container">
               <div className="extracted-claims-header">
                 <h2 className="extracted-claims-header-title">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
                     <polyline points="14 2 14 8 20 8" />
                     <line x1="16" y1="13" x2="8" y2="13" />

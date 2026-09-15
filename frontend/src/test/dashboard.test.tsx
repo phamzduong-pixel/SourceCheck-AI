@@ -87,9 +87,49 @@ const mockEmptyStats: DashboardStats = {
   evaluation_summary: null,
 };
 
+const mockHealthResponse = {
+  status: 'healthy' as const,
+  version: '0.1.0',
+  environment: 'development',
+  timestamp: '2026-09-15T12:00:00Z',
+  components: {
+    backend_api: {
+      status: 'healthy' as const,
+      latency_ms: 0.5,
+      details: 'SourceCheck AI FastAPI service active',
+    },
+    postgresql: {
+      status: 'healthy' as const,
+      latency_ms: 2.1,
+      details: 'Primary database connected',
+    },
+    pgvector: {
+      status: 'healthy' as const,
+      latency_ms: 1.8,
+      details: 'pgvector extension enabled',
+    },
+    llm_service: {
+      status: 'healthy' as const,
+      latency_ms: null,
+      details: 'OpenAI (gpt-4o-mini) - Configured',
+    },
+    embedding_service: {
+      status: 'healthy' as const,
+      latency_ms: 1.2,
+      details: 'openai provider (text-embedding-3-small, dim=1536)',
+    },
+    reranker_service: {
+      status: 'healthy' as const,
+      latency_ms: 1.5,
+      details: 'Reranker active (cross_encoder - BAAI/bge-reranker-base)',
+    },
+  },
+};
+
 describe('Dashboard & System Overview (FE-04.9)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.spyOn(dashboardService, 'getHealthDetails').mockResolvedValue(mockHealthResponse);
   });
 
   const renderDashboard = () => {
@@ -279,5 +319,58 @@ describe('Dashboard & System Overview (FE-04.9)', () => {
 
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
     document.documentElement.removeAttribute('data-theme');
+  });
+
+  it('11. System Health: renders system health card with all 6 dependency badges', async () => {
+    vi.spyOn(dashboardService, 'getStats').mockResolvedValue(mockPopulatedStats);
+    vi.spyOn(dashboardService, 'getHealthDetails').mockResolvedValue(mockHealthResponse);
+
+    renderDashboard();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('system-health-card')).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId('health-overall-status')).toHaveTextContent(/Hoạt động tốt/i);
+    expect(screen.getByTestId('health-component-backend_api')).toBeInTheDocument();
+    expect(screen.getByTestId('health-component-postgresql')).toBeInTheDocument();
+    expect(screen.getByTestId('health-component-pgvector')).toBeInTheDocument();
+    expect(screen.getByTestId('health-component-llm_service')).toBeInTheDocument();
+    expect(screen.getByTestId('health-component-embedding_service')).toBeInTheDocument();
+    expect(screen.getByTestId('health-component-reranker_service')).toBeInTheDocument();
+
+    expect(screen.getByTestId('health-last-checked')).toHaveTextContent(/Kiểm tra lúc/i);
+  });
+
+  it('12. System Health: handles degraded dependencies gracefully without failing dashboard', async () => {
+    vi.spyOn(dashboardService, 'getStats').mockResolvedValue(mockPopulatedStats);
+    vi.spyOn(dashboardService, 'getHealthDetails').mockResolvedValue({
+      status: 'degraded',
+      version: '0.1.0',
+      environment: 'development',
+      timestamp: '2026-09-15T12:00:00Z',
+      components: {
+        backend_api: {
+          status: 'healthy',
+          latency_ms: 0.5,
+          details: 'Active',
+        },
+        postgresql: {
+          status: 'degraded',
+          latency_ms: 15.0,
+          details: 'Fallback to local SQLite database',
+        },
+      },
+    });
+
+    renderDashboard();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('system-health-card')).toBeInTheDocument();
+    });
+
+    expect(screen.getByTestId('health-overall-status')).toHaveTextContent(/Đang suy giảm/i);
+    expect(screen.getByTestId('health-badge-postgresql')).toHaveTextContent(/Đang suy giảm/i);
+    expect(screen.getByTestId('health-detail-postgresql')).toHaveTextContent(/Fallback to local SQLite/i);
   });
 });

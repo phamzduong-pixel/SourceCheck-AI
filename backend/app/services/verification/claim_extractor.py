@@ -32,11 +32,33 @@ class RuleBasedClaimExtractor(BaseClaimExtractor):
         r"(?<!\d)(?<!\w\.\w)(?<![A-Z][a-z])(?<=[.!?])\s+|\n+",
     )
 
-    # Patterns to split compound conjunctions: "X và Y" -> ["X", "Y"]
-    CONJUNCTION_PATTERN = re.compile(
-        r"\s+(?:và|đồng thời|cũng như|cùng với|and|as well as)\s+",
+    # Patterns to split compound conjunction clauses
+    CLAUSE_CONJUNCTION_PATTERN = re.compile(
+        r"\s*(?:;\s*|,\s*(?:đồng thời|cũng như|as well as)\s+|(?:đồng thời|cũng như)\s+)",
         re.IGNORECASE,
     )
+    SIMPLE_AND_PATTERN = re.compile(
+        r"\s+(?:và|and)\s+",
+        re.IGNORECASE,
+    )
+
+    # Lead-in introductory phrases to strip from factual claims
+    LEAD_IN_PATTERNS = re.compile(
+        r"^(?:dựa\s+trên\s+(?:tài\s+liệu|thông\s+tin|bằng\s+chứng|dữ\s+liệu)(?:\s+kiểm\s+chứng|\s+cung\s+cấp|\s+liên\s+quan)?|"
+        r"dựa\s+vào\s+(?:tài\s+liệu|thông\s+tin|bằng\s+chứng|dữ\s+liệu)(?:\s+kiểm\s+chứng|\s+cung\s+cấp|\s+liên\s+quan)?|"
+        r"theo\s+(?:tài\s+liệu|báo\s+cáo|thông\s+tin|nghiên\s+cứu)(?:\s+kiểm\s+chứng|\s+cung\s+cấp|\s+liên\s+quan)?|"
+        r"kết\s+quả\s+(?:cho\s+thấy|nghiên\s+cứu\s+chỉ\s+ra)|"
+        r"based\s+on\s+(?:the\s+)?(?:provided\s+|verified\s+)?(?:document|documents|evidence|information|study)|"
+        r"according\s+to\s+(?:the\s+)?(?:provided\s+|verified\s+)?(?:document|documents|evidence|information|study))[\,\:\s\-]*",
+        re.IGNORECASE,
+    )
+
+    # Verb indicators that suggest a clause contains its own predicate
+    VERB_MARKERS = {
+        "is", "are", "was", "were", "been", "be", "has", "have", "had",
+        "included", "used", "tested", "applied", "proposes", "combines", "contains",
+        "được", "đã", "đang", "sẽ", "là", "gồm", "bao gồm", "sử dụng", "áp dụng",
+    }
 
     async def extract_claims(
         self,
@@ -56,46 +78,56 @@ class RuleBasedClaimExtractor(BaseClaimExtractor):
         if not raw_sentences and clean_input:
             raw_sentences = [clean_input]
 
-        atomic_propositions: List[str] = []
+        propositions_with_context: List[tuple] = []
 
-        for sentence in raw_sentences:
-            clean_s = sentence.strip().rstrip(".!?")
-            # Check if sentence has compound conjunctions
-            parts = self.CONJUNCTION_PATTERN.split(clean_s)
-            if len(parts) > 1:
-                # E.g. "SIC đào tạo AI và IoT"
-                first_part = parts[0].strip()
-                words = first_part.split()
+        for orig_sentence in raw_sentences:
+            # Strip leading bullet points or numbered list markers (e.g. "- ", "* ", "1. ", "• ")
+            clean_s = re.sub(r"^[\s\-\*\•\d+\.\)\:]+\s*", "", orig_sentence).strip()
+            clean_s = clean_s.rstrip(".!?")
+            if not clean_s or len(clean_s) < 3:
+                continue
 
-                if len(words) >= 2:
-                    # subject_verb is everything except the last object word
-                    subject_verb = " ".join(words[:-1])
-                    atomic_propositions.append(f"{first_part}.")
+            # Strip introductory lead-in phrases (e.g. "Dựa trên tài liệu kiểm chứng,")
+            stripped_lead_in = self.LEAD_IN_PATTERNS.sub("", clean_s).strip()
+            if len(stripped_lead_in) >= 3:
+                clean_s = stripped_lead_in
 
-                    for next_part in parts[1:]:
-                        clean_next = next_part.strip()
-                        # If next_part is a short object (e.g. "IoT"), prepend subject_verb
-                        if len(clean_next.split()) <= 2 and subject_verb:
-                            prop = f"{subject_verb} {clean_next}."
-                        else:
-                            prop = f"{clean_next}."
-                        atomic_propositions.append(prop)
-                else:
-                    for part in parts:
-                        p_clean = part.strip()
-                        if p_clean:
-                            atomic_propositions.append(f"{p_clean}.")
-            else:
-                atomic_propositions.append(f"{clean_s}.")
+            # 1. Check for compound clause conjunctions (e.g. "X, đồng thời Y" or "A; B")
+            clause_parts = [p.strip() for p in self.CLAUSE_CONJUNCTION_PATTERN.split(clean_s) if p.strip()]
+            if len(clause_parts) > 1:
+                for part in clause_parts:
+                    p_clean = part.rstrip(".!?")
+                    if p_clean:
+                        propositions_with_context.append((f"{p_clean}.", orig_sentence))
+                continue
+
+            # 2. Check for simple conjunction (e.g. "SIC đào tạo AI và IoT")
+            and_parts = self.SIMPLE_AND_PATTERN.split(clean_s)
+            if len(and_parts) == 2 and "," not in and_parts[0]:
+                first_part = and_parts[0].strip()
+                second_part = and_parts[1].strip()
+                first_words = first_part.split()
+                second_words = second_part.split()
+
+                # If second_part is a short object (e.g. "IoT") without its own verb and first_part is S+V+O (<= 4 words)
+                second_has_verb = any(w.lower() in self.VERB_MARKERS for w in second_words)
+                if len(first_words) in (2, 3, 4) and len(second_words) <= 2 and not second_has_verb:
+                    subject_verb = " ".join(first_words[:-1])
+                    propositions_with_context.append((f"{first_part}.", orig_sentence))
+                    propositions_with_context.append((f"{subject_verb} {second_part}.", orig_sentence))
+                    continue
+
+            # Otherwise preserve full factual proposition
+            propositions_with_context.append((f"{clean_s}.", orig_sentence))
 
         claims: List[ClaimItem] = []
-        for idx, prop in enumerate(atomic_propositions[:max_claims], start=1):
+        for idx, (prop, ctx) in enumerate(propositions_with_context[:max_claims], start=1):
             claims.append(
                 ClaimItem(
                     claim_id=f"claim_{idx}",
                     text=prop,
                     order=idx,
-                    context_sentence=sentence if 'sentence' in locals() else prop,
+                    context_sentence=ctx,
                     verifiable=True,
                 )
             )

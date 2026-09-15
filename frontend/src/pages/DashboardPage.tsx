@@ -7,13 +7,14 @@
 import React, { useEffect, useState } from 'react';
 import { useAIPreferences } from '../hooks/useAIPreferences';
 import { dashboardService } from '../services/dashboard';
-import { DashboardStats } from '../types/dashboard';
+import { DashboardStats, SystemHealthResponse } from '../types/dashboard';
 import { ApiClientError } from '../services/apiClient';
 import {
   DashboardSummaryCards,
   VerificationDistributionCard,
   RecentActivityFeed,
   QuickActionsGrid,
+  SystemHealthCard,
 } from '../components/dashboard';
 import '../styles/dashboard.css';
 
@@ -21,8 +22,10 @@ export const DashboardPage: React.FC = () => {
   const { t } = useAIPreferences();
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
+  const [health, setHealth] = useState<SystemHealthResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+  const [isHealthRefreshing, setIsHealthRefreshing] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
   const fetchStats = async (isManualRefresh = false) => {
@@ -34,8 +37,25 @@ export const DashboardPage: React.FC = () => {
     setError(null);
 
     try {
-      const data = await dashboardService.getStats();
-      setStats(data);
+      const [statsData, healthData] = await Promise.allSettled([
+        dashboardService.getStats(),
+        dashboardService.getHealthDetails(),
+      ]);
+
+      if (statsData.status === 'fulfilled') {
+        setStats(statsData.value);
+      } else {
+        const err = statsData.reason;
+        if (err instanceof ApiClientError) {
+          setError(err.message);
+        } else {
+          setError(t('dashboard.errorTitle'));
+        }
+      }
+
+      if (healthData.status === 'fulfilled') {
+        setHealth(healthData.value);
+      }
     } catch (err: any) {
       if (err instanceof ApiClientError) {
         setError(err.message);
@@ -45,6 +65,18 @@ export const DashboardPage: React.FC = () => {
     } finally {
       setIsLoading(false);
       setIsRefreshing(false);
+    }
+  };
+
+  const fetchHealthOnly = async () => {
+    setIsHealthRefreshing(true);
+    try {
+      const data = await dashboardService.getHealthDetails();
+      setHealth(data);
+    } catch {
+      // Health check failure does not crash the dashboard
+    } finally {
+      setIsHealthRefreshing(false);
     }
   };
 
@@ -84,7 +116,7 @@ export const DashboardPage: React.FC = () => {
               fill="none"
               stroke="currentColor"
               strokeWidth="2"
-              className={isRefreshing ? 'status-dot checking' : ''}
+              className={`btn-refresh-icon ${isRefreshing ? 'spinning' : ''}`}
             >
               <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
             </svg>
@@ -161,7 +193,15 @@ export const DashboardPage: React.FC = () => {
         </>
       )}
 
-      {/* 3. Quick Actions Feature Grid (Always accessible) */}
+      {/* 3. System Health & Dependency Monitoring Panel */}
+      <SystemHealthCard
+        health={health}
+        isLoading={isHealthRefreshing}
+        onRefresh={fetchHealthOnly}
+        t={t}
+      />
+
+      {/* 4. Quick Actions Feature Grid (Always accessible) */}
       <div style={{ marginTop: '0.5rem' }}>
         <h2 style={{ fontSize: '1.15rem', fontWeight: 650, margin: '0 0 1rem 0' }}>
           {t('dashboard.quickActionsTitle')}

@@ -37,3 +37,19 @@ export interface DashboardStats {
   recent_activity: RecentActivityItem[];
   evaluation_summary?: EvaluationSummary | null;
 }
+
+export type HealthStatus = 'healthy' | 'degraded' | 'unavailable' | 'unknown';
+
+export interface DependencyHealth {
+  status: HealthStatus;
+  latency_ms?: number | null;
+  details?: string | null;
+}
+
+export interface SystemHealthResponse {
+  status: HealthStatus;
+  version: string;
+  environment: string;
+  timestamp: string;
+  components: Record<string, DependencyHealth>;
+}

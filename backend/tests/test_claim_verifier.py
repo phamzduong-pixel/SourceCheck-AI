@@ -148,6 +148,16 @@ def test_contradiction_cross_source_numerical_conflict():
     assert conflict.source_b == "Báo B"
 
 
+@pytest.mark.asyncio
+async def test_claim_polarity_antonym_refutation():
+    """Verify that antonym/polarity clash (e.g. tăng trưởng vs suy thoái) produces REFUTED verdict."""
+    verifier = ClaimVerifier()
+    claim = ClaimItem(claim_id="c1", text="Kinh tế Việt Nam tăng trưởng 8% trong năm 2024.", order=1)
+    cand = _create_candidate("E1", "Kinh tế Việt Nam suy thoái nặng nề trong năm 2024.", 0.85)
+
+    result = await verifier.verify_claim_match(claim, [cand])
+    assert result.verdict == VerificationVerdict.REFUTED
+    assert "E1" in result.refuting_evidence_ids
 def test_contradiction_claim_refutation():
     """Verify that a REFUTED claim registers as a CLAIM_REFUTATION conflict."""
     detector = ContradictionDetector()
@@ -165,6 +175,35 @@ def test_contradiction_claim_refutation():
     assert len(conflicts) == 1
     assert conflicts[0].conflict_type == "CLAIM_REFUTATION"
     assert conflicts[0].evidence_a_id == "E2"
+    assert conflicts[0].claim_text == "Doanh thu giảm 50%."
+
+
+def test_contradiction_cross_source_negation_conflict():
+    """Verify that contradictory evidence with negation divergence from different sources is detected."""
+    detector = ContradictionDetector()
+
+    cand_a = _create_candidate("E1", "Dự án đã được phê duyệt chính thức.", 0.9, source_title="Bộ X")
+    cand_b = _create_candidate("E2", "Dự án chưa được phê duyệt chính thức.", 0.9, source_title="Ban Y")
+
+    candidates_map = {"claim_1": [cand_a, cand_b]}
+    res = ClaimVerificationResult(
+        claim_id="claim_1",
+        claim_text="Dự án đã được phê duyệt chính thức.",
+        verdict=VerificationVerdict.SUPPORTED,
+        confidence=0.8,
+        supporting_evidence_ids=["E1"],
+        refuting_evidence_ids=[],
+        explanation="",
+    )
+
+    conflicts = detector.detect_conflicts([res], candidates_map)
+    assert len(conflicts) >= 1
+    conflict = next(c for c in conflicts if c.conflict_type == "CROSS_SOURCE_CONFLICT")
+    assert conflict.claim_text == "Dự án đã được phê duyệt chính thức."
+    assert conflict.evidence_a_id == "E1"
+    assert conflict.evidence_b_id == "E2"
+    assert conflict.source_a == "Bộ X"
+    assert conflict.source_b == "Ban Y"
 
 
 # ---------------------------------------------------------------------------
@@ -267,3 +306,100 @@ async def test_verification_service_verify_structured_answer():
     assert report.evidence_coverage > 0.5
     assert 0.0 <= report.average_confidence <= 1.0
     assert len(report.results) == 3
+
+
+# ---------------------------------------------------------------------------
+# FIX-02 Focused Tests: Document A vs Claim B Grounding Integrity
+# ---------------------------------------------------------------------------
+
+@pytest.mark.asyncio
+async def test_doc_a_vs_unrelated_claim_b_returns_not_enough_info():
+    """When Document A is in context, but claim is about Document B (unrelated topic),
+    verification must return NOT_ENOUGH_INFO and Evidence Coverage must be 0%."""
+    from app.services.verification.evidence_matcher import EvidenceMatcher
+    from app.services.generation.answer_assembler import AnswerAssembler
+    from app.services.generation.schemas import FinalAnswerStatus
+
+    doc_a_evidence = EvidenceItem(
+        evidence_id="E1",
+        chunk_id=str(uuid.uuid4()),
+        content="Nghiên cứu về mô hình AI Transformer năm 2024 đạt độ chính xác 95% trên tập dữ liệu X.",
+        score=0.75,
+        source_title="AI Research Paper 2024",
+    )
+
+    # Claim B from unrelated document
+    claim_b = ClaimItem(
+        claim_id="claim_b",
+        text="Máy tính lượng tử đạt 1000 qubits vào năm 2026 tại viện nghiên cứu Y.",
+        order=1,
+        verifiable=True,
+    )
+
+    matcher = EvidenceMatcher()
+    matching_resp = await matcher.match_claims_to_evidence(
+        claims=[claim_b],
+        evidence_items=[doc_a_evidence],
+    )
+
+    verifier = ClaimVerifier()
+    results = await verifier.verify_matches_batch(matching_resp.matches)
+
+    assert len(results) == 1
+    res = results[0]
+    # Must NOT be SUPPORTED
+    assert res.verdict == VerificationVerdict.NOT_ENOUGH_INFO
+    assert res.supporting_evidence_ids == []
+    assert res.confidence == 0.0
+
+    coverage_calc = EvidenceCoverageCalculator()
+    cov_metrics = coverage_calc.compute_coverage(results)
+    assert cov_metrics["coverage_rate"] == 0.0
+    assert cov_metrics["verified_claims"] == 0
+
+    # Test AnswerAssembler status resolution
+    assembled = AnswerAssembler.assemble(
+        question="Thuật toán máy tính lượng tử",
+        answer="Máy tính lượng tử đạt 1000 qubits vào năm 2026 tại viện nghiên cứu Y.",
+        claims=[claim_b],
+        evidence=[doc_a_evidence],
+        verification_report=VerificationReport(
+            total_claims=1,
+            verified_claims_count=0,
+            evidence_coverage=0.0,
+            average_confidence=0.0,
+            results=results,
+            conflicts=[],
+            has_contradictions=False,
+        ),
+    )
+
+    assert assembled.status == FinalAnswerStatus.INSUFFICIENT_EVIDENCE
+    assert assembled.evidence_coverage == 0.0
+    assert assembled.verification_summary["SUPPORTED"] == 0
+    assert assembled.verification_summary["NOT_ENOUGH_INFO"] == 1
+
+
+@pytest.mark.asyncio
+async def test_evidence_matching_does_not_equal_verification():
+    """Having candidate evidence in retrieval matching does not automatically verify the claim."""
+    cand = MatchedEvidenceCandidate(
+        claim_id="c1",
+        evidence_id="E1",
+        chunk_id=str(uuid.uuid4()),
+        content="Thị trường bất động sản quý 1 năm 2024 có nhiều biến động.",
+        relevance_score=0.50,
+        rank=1,
+    )
+
+    unrelated_claim = ClaimItem(
+        claim_id="c1",
+        text="Doanh số xe điện Tesla tăng 40% trong năm 2023.",
+        order=1,
+    )
+
+    verifier = ClaimVerifier()
+    res = await verifier.verify_claim_match(unrelated_claim, [cand])
+    assert res.verdict == VerificationVerdict.NOT_ENOUGH_INFO
+    assert res.supporting_evidence_ids == []
+

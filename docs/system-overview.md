@@ -97,7 +97,7 @@ Quy trình xử lý một yêu cầu kiểm chứng trong SourceCheck AI diễn 
 ## 6. Các thành phần chính của hệ thống
 
 1. **Frontend (`frontend/`)**: Giao diện web người dùng xây dựng trên nền React 18, Vite và TypeScript:
-   - **Research Chat Assistant (`/chat` hoặc `/`)**: Giao diện tra cứu phong cách Perplexity, hỗ trợ hội thoại đa lượt, ngăn minh chứng trượt (Evidence Drawer), phân rã luận điểm và đo lường độ phủ bằng chứng.
+   - **Research Chat Assistant (`/chat` hoặc `/`)**: Giao diện tra cứu phong cách ChatGPT / DeepSeek / Perplexity, căn chỉnh thẳng hàng cân xứng (balanced left-rail), thanh Header cố định hiển thị tên cuộc trò chuyện và nút `+ Tra cứu mới`, hỗ trợ hội thoại đa lượt, ngăn minh chứng trượt (Evidence Drawer), phân rã luận điểm và đo lường độ phủ bằng chứng.
    - **Fact-Checking Workspace (`/fact-check`)**: Không gian kiểm chứng chuyên sâu văn bản, hiển thị phán quyết 4 trạng thái, lập trường và cảnh báo mâu thuẫn chéo.
    - **Search / Retrieval Explorer (`/search`)**: Công cụ tra cứu retrieval độc lập, minh bạch hóa điểm số BM25, Dense Vector, RRF và Cross-Encoder.
    - **Document Knowledge Base (`/documents`)**: Quản lý nạp, xem và xóa tài liệu tri thức nội bộ (PDF, DOCX, TXT).

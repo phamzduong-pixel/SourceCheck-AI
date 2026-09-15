@@ -733,5 +733,106 @@ describe('Grounded Q&A Core Feature (FE-03)', () => {
       // Evidence coverage card should NOT be rendered
       expect(screen.queryByTestId('evidence-coverage-card')).not.toBeInTheDocument();
     });
+
+    it('renders all four verdicts (SUPPORTED, PARTIALLY_SUPPORTED, REFUTED, NOT_ENOUGH_INFO) with verified claim ratio', async () => {
+      const fourVerdictsAnswer: FinalAnswerResponse = {
+        question: 'Phân tích 4 mức độ kiểm chứng',
+        answer: 'Luận điểm 1 đúng [1]. Luận điểm 2 đúng một phần [2]. Luận điểm 3 sai [3]. Luận điểm 4 chưa đủ thông tin [4].',
+        status: 'PARTIALLY_SUPPORTED',
+        claims: [
+          {
+            claim_id: 'c-sup',
+            text: 'Luận điểm được chứng minh hoàn toàn',
+            order: 1,
+            verdict: 'SUPPORTED',
+            confidence: 0.98,
+            verifiable: true,
+          },
+          {
+            claim_id: 'c-part',
+            text: 'Luận điểm được chứng minh một phần',
+            order: 2,
+            verdict: 'PARTIALLY_SUPPORTED',
+            confidence: 0.75,
+            verifiable: true,
+          },
+          {
+            claim_id: 'c-ref',
+            text: 'Luận điểm bị bác bỏ',
+            order: 3,
+            verdict: 'REFUTED',
+            confidence: 0.92,
+            verifiable: true,
+          },
+          {
+            claim_id: 'c-nei',
+            text: 'Luận điểm chưa đủ thông tin kiểm chứng',
+            order: 4,
+            verdict: 'NOT_ENOUGH_INFO',
+            confidence: 0.40,
+            verifiable: true,
+          },
+        ],
+        evidence: [
+          {
+            evidence_id: 'ev-1',
+            chunk_id: 'ch-1',
+            content: 'Bằng chứng 1',
+            score: 0.98,
+            source_title: 'Nguồn 1',
+          },
+        ],
+        citations: [
+          {
+            citation_id: 'cit-1',
+            claim_id: 'c-sup',
+            evidence_id: 'ev-1',
+            source_name: 'Nguồn 1',
+            quote: 'Bằng chứng 1',
+            stance: 'SUPPORTS',
+            footnote_index: 1,
+            relevance_score: 0.98,
+          },
+        ],
+        evidence_coverage: 0.75,
+        verification_summary: {
+          SUPPORTED: 1,
+          PARTIALLY_SUPPORTED: 1,
+          REFUTED: 1,
+          NOT_ENOUGH_INFO: 1,
+        },
+        metadata: {},
+      };
+
+      vi.spyOn(qaService, 'askQuestion').mockResolvedValueOnce(fourVerdictsAnswer);
+
+      render(
+        <MemoryRouter>
+          <QAPage />
+        </MemoryRouter>
+      );
+
+      fireEvent.change(screen.getByTestId('question-textarea'), { target: { value: 'Test 4 verdicts' } });
+      fireEvent.click(screen.getByTestId('btn-ask'));
+
+      await waitFor(() => {
+        expect(screen.getByTestId('claims-section')).toBeInTheDocument();
+      });
+
+      // Verify all 4 verdicts rendered
+      expect(screen.getByTestId('claim-verdict-c-sup')).toHaveTextContent('SUPPORTED');
+      expect(screen.getByTestId('claim-verdict-c-part')).toHaveTextContent('PARTIALLY_SUPPORTED');
+      expect(screen.getByTestId('claim-verdict-c-ref')).toHaveTextContent('REFUTED');
+      expect(screen.getByTestId('claim-verdict-c-nei')).toHaveTextContent('NOT_ENOUGH_INFO');
+
+      // Verify Verified Claims Ratio: 3 verified out of 4 total claims
+      expect(screen.getByTestId('stat-verified-ratio')).toHaveTextContent('Đối soát: 3/4 claims');
+
+      // Verify Evidence Coverage summary counts
+      expect(screen.getByTestId('stat-supported')).toHaveTextContent('Supported: 1');
+      expect(screen.getByTestId('stat-partially')).toHaveTextContent('Partially: 1');
+      expect(screen.getByTestId('stat-refuted')).toHaveTextContent('Refuted: 1');
+      expect(screen.getByTestId('stat-not-enough-info')).toHaveTextContent('Not Enough Info: 1');
+    });
   });
 });

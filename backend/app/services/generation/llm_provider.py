@@ -248,7 +248,7 @@ class MockLLMProvider(BaseLLMProvider):
             evidence_ids = [f"E{num}" for num in found_ids[:2]] if found_ids else ["E1"]
 
             # Extract factual content from evidence block if available
-            fact_match = re.search(r'Nội dung:\s*["\'](.*?)["\']', prompt)
+            fact_match = re.search(r'Nội dung:\s*["\'](.*?)["\']', prompt, re.DOTALL)
             if fact_match:
                 extracted_fact = fact_match.group(1).strip()
                 answer_text = f"Dựa trên tài liệu kiểm chứng, {extracted_fact}"

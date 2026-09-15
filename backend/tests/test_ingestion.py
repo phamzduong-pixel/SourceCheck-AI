@@ -358,8 +358,8 @@ async def test_ingestion_service_success(async_session: AsyncSession):
     
     assert len(db_chunks) == result["total_chunks"]
     for chunk in db_chunks:
-        # Embedding must be None at this foundation stage
-        assert chunk.embedding is None
+        # Embedding is generated and populated for chunks
+        assert chunk.embedding is not None
         # Page context and offsets must be stored in chunk_metadata
         assert "page_number" in chunk.chunk_metadata
         assert "char_start" in chunk.chunk_metadata

@@ -13,6 +13,7 @@ from app.core.exceptions import (
     UnsupportedFileTypeException,
 )
 from app.models.document import Document, DocumentChunk
+from app.services.embedding.embedding_service import EmbeddingService
 from app.services.ingestion.chunkers import ChunkData, get_chunker
 from app.services.ingestion.cleaners import TextCleaner
 from app.services.ingestion.metadata import MetadataExtractor
@@ -27,8 +28,10 @@ class IngestionService:
     def __init__(
         self,
         default_chunk_strategy: str = "fixed",
+        embedding_service: Optional[EmbeddingService] = None,
     ):
         self.default_chunk_strategy = default_chunk_strategy
+        self.embedding_service = embedding_service or EmbeddingService()
 
     def validate_file(self, filename: str, file_size: int) -> None:
         """Validate file format and size limits.
@@ -130,19 +133,29 @@ class IngestionService:
             session.add(document)
             await session.flush()  # Generate document.id
 
+            # Generate dense vector embeddings for chunks
+            embeddings = None
+            if self.embedding_service and chunks:
+                try:
+                    chunk_texts = [c.content for c in chunks]
+                    embeddings = await self.embedding_service.embed_texts(chunk_texts)
+                except Exception as emb_err:
+                    logger.warning(f"Embedding generation failed for document '{filename}': {emb_err}")
+
             db_chunks = []
-            for c in chunks:
+            for idx, c in enumerate(chunks):
                 chunk_meta = {
                     "page_number": c.page_number,
                     "char_start": c.char_start,
                     "char_end": c.char_end,
                     **c.metadata,
                 }
+                emb = embeddings[idx] if (embeddings and idx < len(embeddings)) else None
                 db_chunk = DocumentChunk(
                     document_id=document.id,
                     chunk_index=c.chunk_index,
                     content=c.content,
-                    embedding=None,  # Intentionally None until vector pipeline
+                    embedding=emb,
                     token_count=c.token_count,
                     chunk_metadata=chunk_meta,
                 )

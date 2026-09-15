@@ -24,8 +24,8 @@ Tài liệu đặc tả toàn bộ danh mục tính năng của hệ thống Sou
   - `LoginPage.tsx` & `RegisterPage.tsx`: Thiết kế phong cách Glassmorphism mờ cao cấp (`backdrop-filter: blur(24px)`), ô nhập bán trong suốt, nút con mắt SVG (`EyeIcon.tsx`) bật/tắt mật khẩu.
   - `GoogleButton.tsx`: Nút đăng nhập Google với logo SVG 4 màu và spinner trạng thái.
   - `OAuthCallbackPage.tsx`: Nhận redirect từ Google (`/auth/callback`), tự động đổi mã lấy token và chuyển hướng tới Authenticated Workspace (`/`).
-  - `AppLayout.tsx`, `Sidebar.tsx`, `Header.tsx`: Khung ứng dụng hoàn chỉnh, hỗ trợ Light & Dark Mode, menu người dùng floating popup, chuyển đổi độc lập ngôn ngữ UI (vi/en) và ngôn ngữ AI (vi/en).
-  - `ResearchChatPage.tsx` & `chat.css`: Giao diện Main Research Chat phong cách Graylight/ChatGPT tối giản, hỗ trợ multi-turn follow-up với conversation context, câu hỏi nối tiếp (với conversation_id), hiển thị trạng thái loading, xử lý `INSUFFICIENT_EVIDENCE` mượt mà và trích dẫn/bằng chứng độc lập theo từng lượt.
+  - `AppLayout.tsx`, `Sidebar.tsx`, `Header.tsx`: Khung ứng dụng hoàn chỉnh, hỗ trợ Light & Dark Mode (Matte Charcoal), menu người dùng floating popup, chuyển đổi độc lập ngôn ngữ UI (vi/en) và ngôn ngữ AI (vi/en), thanh Header cố định (`position: sticky; top: 0;`) đồng bộ hiển thị tiêu đề cuộc trò chuyện tóm tắt và nút `+ Tra cứu mới`.
+  - `ResearchChatPage.tsx` & `chat.css`: Giao diện Main Research Chat phong cách Graylight/ChatGPT tối giản, căn chỉnh cân xứng theo trục trái (balanced left-rail) cho cả tin nhắn người dùng và câu trả lời AI, hỗ trợ multi-turn follow-up với conversation context, câu hỏi nối tiếp (với conversation_id), hiển thị trạng thái loading, xử lý `INSUFFICIENT_EVIDENCE` mượt mà và trích dẫn/bằng chứng độc lập theo từng lượt.
   - Custom Scrollbar: Thanh cuộn hiện đại toàn hệ thống (`16px`, `#888888` thumb, `#555555` hover, `border-radius: 10px`, nền trong suốt) bám sát lề phải màn hình.
   - `vite.config.ts`: Cấu hình Reverse Proxy chuyển tiếp `/api` sang FastAPI backend (Port 8000).
 
@@ -97,15 +97,17 @@ Tài liệu đặc tả toàn bộ danh mục tính năng của hệ thống Sou
 ## 5. Nhóm chức năng Trợ lý Tra cứu Nghiên cứu (Research Chat Assistant & Grounded Q&A)
 
 ### 5.1. Không gian Tra cứu Nghiên cứu Trung tâm (Main Research Chat Workspace — `/chat` hoặc `/`)
-- **Mục đích**: Đóng vai trò là màn hình làm việc chính phong cách Perplexity, tối ưu cho tra cứu thông tin có căn cứ.
+- **Mục đích**: Đóng vai trò là màn hình làm việc chính phong cách ChatGPT / DeepSeek / Perplexity, tối ưu cho tra cứu và đối soát thông tin có căn cứ nguồn.
 - **Input**: Câu hỏi hoặc chủ đề tra cứu của người dùng.
 - **Output**:
+  - Thanh Header cố định (`Sticky Top Header`): Tự động hiển thị tên tóm tắt của cuộc hội thoại, nhãn `● Grounded` và nút `+ Tra cứu mới` đứng yên trên cùng khi cuộn.
   - Lời chào khởi đầu (Welcome State) kèm gợi ý chủ đề (Prompt Starters).
+  - Trải nghiệm hội thoại cân đối: Tin nhắn người dùng và phản hồi AI căn chỉnh thẳng hàng từ lề trái với avatar 34x34px, độ rộng tối đa 820px.
   - Khung trả lời từ AI kèm hệ thống chú thích nguồn tương tác (`[1]`, `[2]`).
   - Thẻ phân tích nhận định thành phần (`Claims Breakdown`).
   - Thẻ định lượng độ bao phủ bằng chứng (`Evidence Coverage Card`).
   - Ngăn trượt tra cứu bằng chứng chi tiết (`EvidenceDrawer`).
-  - Khung nhập liệu đa lượt cố định ở đáy màn hình (`chat-sticky-composer`).
+  - Khung nhập liệu thu nhỏ thanh lịch cố định ở đáy màn hình (`question-composer-card`).
 - **Actor**: Người dùng cuối, Nhà nghiên cứu.
 
 ### 5.2. Nhận diện Ý định Người dùng (Intent Router — Deterministic Greeting & Identity Bypass)

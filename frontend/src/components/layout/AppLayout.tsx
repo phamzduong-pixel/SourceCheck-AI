@@ -12,11 +12,15 @@ import '../../styles/layout.css';
 export const AppLayout: React.FC = () => {
   const [isMobileOpen, setIsMobileOpen] = useState<boolean>(false);
   const location = useLocation();
-  const { t } = useAIPreferences();
+  const { t, activeChatTitle } = useAIPreferences();
 
   const getPageTitle = (pathname: string): string => {
-    if (pathname === '/' || pathname.startsWith('/chat')) return t('chat.title');
-    if (pathname.startsWith('/qa')) return t('nav.qa');
+    if (pathname === '/' || pathname.startsWith('/chat')) {
+      return activeChatTitle || t('chat.title');
+    }
+    if (pathname.startsWith('/qa')) {
+      return activeChatTitle || t('nav.qa');
+    }
     if (pathname.startsWith('/fact-check')) return t('nav.factCheck');
     if (pathname.startsWith('/documents')) return t('nav.documents');
     if (pathname.startsWith('/search')) return t('nav.search');

@@ -65,6 +65,8 @@ Tài liệu kịch bản trình diễn (Live Demo Walkthrough) từng bước ch
 * **Hành động**: Nhập câu hỏi vào khung soạn thảo:
   > *"Tăng trưởng GDP của Việt Nam năm 2023 đạt bao nhiêu phần trăm theo số liệu chính thức?"*
 * **Điểm nhấn**:
+  * Giao diện hội thoại cân đối (Balanced Left-Rail Alignment), câu hỏi và câu trả lời AI thẳng hàng nhau dọc theo trục lề trái.
+  * Thanh Header cố định (`Sticky Top Header`) tự động hiển thị tên tóm tắt cuộc hội thoại kèm badge `● Grounded` và nút **"+ Tra cứu mới"** luôn đứng yên trên đỉnh màn hình khi cuộn trang.
   * Hệ thống thực thi **Hybrid Search (Dense Vector + BM25)** kết hợp **Reciprocal Rank Fusion (RRF)** và **Cross-Encoder Reranker**.
   * Câu trả lời được tổng hợp ngắn gọn kèm các thẻ trích dẫn footnote `[1]`, `[2]`.
   * Nhấn vào `[1]` để mở **Evidence Drawer** bên phải, xem trực tiếp đoạn trích dẫn nguyên văn (verbatim snippet), điểm liên quan và nguồn tài liệu gốc.
@@ -78,6 +80,7 @@ Tài liệu kịch bản trình diễn (Live Demo Walkthrough) từng bước ch
 * **Điểm nhấn**:
   * Module **Contextual Query Rewriter** tự động nhận diện từ khóa anaphoric ("Còn... thì sao") và tái tạo truy vấn độc lập: *"Năm 2023 kim ngạch xuất nhập khẩu Việt Nam đạt bao nhiêu?"*.
   * Câu trả lời lượt 2 được lưu nối tiếp vào lịch sử hội thoại (`/conversations`), hoàn toàn cô lập theo tài khoản người dùng.
+  * Nút **"+ Tra cứu mới"** trên Header cho phép reset phiên trò chuyện tức thì để bắt đầu chủ đề mới.
 
 ---
 

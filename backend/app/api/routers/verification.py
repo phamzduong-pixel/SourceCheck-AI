@@ -11,7 +11,8 @@ from app.schemas.verification import (
 )
 from app.services.verification.verification_service import VerificationService
 from app.services.verification.claim_extractor import ClaimExtractor
-from app.api.dependencies import get_verification_service
+from app.api.dependencies import get_verification_service, get_db
+from sqlalchemy.ext.asyncio import AsyncSession
 
 router = APIRouter(prefix="/verify", tags=["Verification"])
 
@@ -25,9 +26,10 @@ router = APIRouter(prefix="/verify", tags=["Verification"])
 async def verify_content(
     request: VerificationCreateRequest,
     verification_service: VerificationService = Depends(get_verification_service),
+    db: AsyncSession = Depends(get_db),
 ):
     """Run full fact-checking: Extract claims -> Match evidence -> Verify stance -> Detect contradictions."""
-    result = await verification_service.verify_text(request)
+    result = await verification_service.verify_text(request, session=db)
     return APIResponse(
         success=True,
         data=result,

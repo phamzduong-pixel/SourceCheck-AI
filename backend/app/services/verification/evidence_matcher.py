@@ -24,14 +24,33 @@ from app.services.verification.schemas import (
 logger = logging.getLogger(__name__)
 
 
+STOP_WORDS = {
+    "the", "a", "an", "in", "on", "of", "to", "is", "are", "was", "were", "been", "be",
+    "and", "or", "for", "with", "by", "as", "at", "from", "that", "this", "it", "its",
+    "của", "và", "các", "có", "được", "là", "trong", "cho", "với", "ở", "về", "từ",
+    "đã", "sẽ", "những", "một", "này", "đó", "ra", "vào", "lại",
+}
+
+
 def _compute_token_overlap(query: str, passage: str) -> float:
-    """Compute normalized token overlap similarity between query/claim and passage."""
-    q_tokens = set(re.findall(r"\w+", query.lower()))
-    p_tokens = set(re.findall(r"\w+", passage.lower()))
-    if not q_tokens or not p_tokens:
+    """Compute normalized token overlap similarity on content words with stem prefix support."""
+    q_all = re.findall(r"[\w\d\.\/\%\-]+", query.lower())
+    p_tokens = set(re.findall(r"[\w\d\.\/\%\-]+", passage.lower()))
+    if not q_all or not p_tokens:
         return 0.0
-    common = q_tokens.intersection(p_tokens)
-    return len(common) / len(q_tokens)
+
+    # Filter stop words to evaluate factual content words
+    q_content = [t for t in q_all if t not in STOP_WORDS and len(t) > 1]
+    tokens_to_match = q_content if q_content else q_all
+
+    matched = 0.0
+    for q in tokens_to_match:
+        if q in p_tokens:
+            matched += 1.0
+        elif len(q) >= 4 and any(p.startswith(q[:4]) or q.startswith(p[:4]) for p in p_tokens if len(p) >= 4):
+            matched += 0.85
+
+    return min(1.0, round(matched / len(tokens_to_match), 4))
 
 
 class EvidenceMatcher:
@@ -89,7 +108,7 @@ class EvidenceMatcher:
                     document_id=item.document_id,
                     source_id=item.source_id,
                     content=item.content,
-                    score=item.score,
+                    score=0.0,
                     source_title=item.source_title,
                     source_url=item.source_url,
                     publisher=item.publisher,
@@ -109,8 +128,11 @@ class EvidenceMatcher:
             # 3. Filter by threshold and build candidate records
             for rank_idx, hit in enumerate(reranked_hits, start=1):
                 overlap = _compute_token_overlap(claim.text, hit.content)
-                # Combined relevance score taking max of cross-encoder rerank score and token overlap
-                score = max(hit.score, overlap)
+                # Combined relevance score taking max of claim-specific rerank score and token overlap
+                score = max(
+                    hit.score if hit.score > 0.05 else 0.0,
+                    overlap,
+                )
 
                 if score < threshold:
                     continue
@@ -182,13 +204,30 @@ class EvidenceMatcher:
         self,
         claims: List[ExtractedClaim],
         top_k: int = 5,
+        session: Optional[AsyncSession] = None,
     ) -> Dict[str, List[SearchHit]]:
-        """Backward-compatible method querying retrieval dynamically for legacy endpoints."""
+        """Query retrieval dynamically for claims, searching indexed documents in database."""
         matched: Dict[str, List[SearchHit]] = {}
-        for claim in claims:
-            claim_key = claim.claim_id or claim.claim_text
-            search_res = await self.retrieval_service.search(
-                query=claim.claim_text, top_k=top_k * 2, rerank=True
-            )
-            matched[claim_key] = search_res.hits[:top_k]
+
+        async def _do_search(s: Optional[AsyncSession]):
+            for claim in claims:
+                claim_key = claim.claim_id or claim.claim_text
+                search_res = await self.retrieval_service.search(
+                    query=claim.claim_text, top_k=top_k * 2, rerank=True, session=s
+                )
+                matched[claim_key] = search_res.hits[:top_k]
+
+        if session is not None:
+            await _do_search(session)
+        else:
+            try:
+                from app.core.database import async_session_factory, _fallback_session_factory, check_db_connection
+                is_primary_healthy = await check_db_connection()
+                active_factory = async_session_factory if is_primary_healthy else _fallback_session_factory
+                async with active_factory() as s:
+                    await _do_search(s)
+            except Exception as e:
+                logger.warning(f"Error acquiring fallback DB session for evidence matching: {e}")
+                await _do_search(None)
+
         return matched

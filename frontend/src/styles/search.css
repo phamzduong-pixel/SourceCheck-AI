@@ -111,8 +111,18 @@
 }
 
 .btn-search-submit:disabled {
-  opacity: 0.6;
+  background-color: var(--color-bg-muted) !important;
+  color: var(--color-text-muted) !important;
+  border-color: var(--color-border) !important;
   cursor: not-allowed;
+  opacity: 0.8;
+}
+
+[data-theme="dark"] .btn-search-submit:disabled {
+  background-color: rgba(255, 255, 255, 0.08) !important;
+  color: var(--color-text-muted) !important;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+  opacity: 1;
 }
 
 /* Options Bar: Mode, Rerank, Top-K */
@@ -722,7 +732,7 @@
   flex-shrink: 0;
 }
 
-.vector-icon { color: #2563eb; }
+.vector-icon { color: var(--color-text-primary); }
 .bm25-icon { color: #059669; }
 .rrf-icon { color: #7c3aed; }
 .rerank-icon { color: #d97706; }

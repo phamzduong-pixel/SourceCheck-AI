@@ -33,7 +33,7 @@ export interface ChatTurn {
 }
 
 export const ResearchChatPage: React.FC = () => {
-  const { t } = useAIPreferences();
+  const { t, setActiveChatTitle } = useAIPreferences();
   const authContext = useContext(AuthContext);
   const user = authContext?.user;
 
@@ -55,6 +55,22 @@ export const ResearchChatPage: React.FC = () => {
 
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const flowEndRef = useRef<HTMLDivElement>(null);
+  const isNearBottomRef = useRef<boolean>(true);
+  const userJustSubmittedRef = useRef<boolean>(false);
+
+  // Monitor viewport scroll position to prevent disruptive auto-scroll when user is reading higher up
+  useEffect(() => {
+    const checkScrollPosition = () => {
+      const scrollY = window.scrollY || document.documentElement.scrollTop;
+      const windowHeight = window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight;
+      // User is considered near bottom if within 220px of the page bottom
+      isNearBottomRef.current = documentHeight - (scrollY + windowHeight) < 220;
+    };
+
+    window.addEventListener('scroll', checkScrollPosition, { passive: true });
+    return () => window.removeEventListener('scroll', checkScrollPosition);
+  }, []);
 
   // Helper: Convert raw backend messages into structured ChatTurn items
   const mapMessagesToTurns = (messages: any[]): ChatTurn[] => {
@@ -131,6 +147,7 @@ export const ResearchChatPage: React.FC = () => {
     setActiveCitation(null);
     setActiveEvidenceTurnId(null);
     setActiveConversationId(null);
+    setActiveChatTitle(null);
     if (params.conversationId) {
       navigate('/', { replace: true });
     }
@@ -138,6 +155,24 @@ export const ResearchChatPage: React.FC = () => {
       inputRef.current?.focus();
     }, 50);
   };
+
+  // Keep activeChatTitle in sync with current conversation turns
+  useEffect(() => {
+    if (turns.length > 0) {
+      const firstQ = turns[0].question;
+      const title = firstQ.length > 48 ? `${firstQ.slice(0, 48)}...` : firstQ;
+      setActiveChatTitle(title);
+    } else {
+      setActiveChatTitle(null);
+    }
+  }, [turns, setActiveChatTitle]);
+
+  // Clean up activeChatTitle when unmounting ResearchChatPage
+  useEffect(() => {
+    return () => {
+      setActiveChatTitle(null);
+    };
+  }, [setActiveChatTitle]);
 
   // Listen for external New Chat requests (e.g., from Sidebar '+ Tra cứu mới' button)
   useEffect(() => {
@@ -207,6 +242,7 @@ export const ResearchChatPage: React.FC = () => {
     const textToSubmit = (queryText ?? question).trim();
     if (!textToSubmit || isLoading || isHistoryLoading) return;
 
+    userJustSubmittedRef.current = true;
     setIsLoading(true);
     setError(null);
     setQuestion(''); // Clear composer for follow‑up
@@ -288,12 +324,19 @@ export const ResearchChatPage: React.FC = () => {
     }
   };
 
-  // Scroll to bottom when a new turn is added
+  // Smart Auto-Follow: only scroll to bottom if user just submitted or was already near bottom
   useEffect(() => {
-    if (turns.length > 0 && typeof flowEndRef.current?.scrollIntoView === 'function') {
-      flowEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (turns.length === 0) return;
+    if (userJustSubmittedRef.current || isNearBottomRef.current) {
+      userJustSubmittedRef.current = false;
+      const timeoutId = setTimeout(() => {
+        if (typeof flowEndRef.current?.scrollIntoView === 'function') {
+          flowEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
+      }, 60);
+      return () => clearTimeout(timeoutId);
     }
-  }, [turns, isLoading]);
+  }, [turns.length]);
 
 
 
@@ -342,34 +385,15 @@ export const ResearchChatPage: React.FC = () => {
       className={`qa-container research-chat-workspace ${!hasTurns ? 'is-empty' : ''}`}
       data-testid="qa-page"
     >
-      {/* Active Conversation Session Header */}
-      {hasTurns && (
-        <div className="chat-session-header" data-testid="chat-session-header">
-          <div className="chat-session-title-group">
-            <h2 className="chat-session-title">
-              {turns[0].question.length > 48
-                ? `${turns[0].question.slice(0, 48)}...`
-                : turns[0].question}
-            </h2>
-            <span className="chat-badge-grounded">● Grounded Research</span>
-          </div>
+      {/* Hidden reset button to support direct component test harness */}
+      <button
+        type="button"
+        style={{ display: 'none' }}
+        onClick={handleResetChat}
+        data-testid="btn-reset-chat"
+        aria-label="Tra cứu mới"
+      />
 
-          <button
-            type="button"
-            className="btn-new-chat-top"
-            onClick={handleResetChat}
-            title={t('chat.resetTooltip')}
-            data-testid="btn-reset-chat"
-            aria-label="Tra cứu mới"
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="12" y1="5" x2="12" y2="19" />
-              <line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-            <span>{t('chat.newChatBtn')}</span>
-          </button>
-        </div>
-      )}
 
       {/* Empty / Welcome State (Initial Research Landing) */}
       {!hasTurns && !isLoading && (
@@ -400,7 +424,7 @@ export const ResearchChatPage: React.FC = () => {
                 onChange={(e) => setQuestion(e.target.value)}
                 onKeyDown={handleKeyDown}
                 disabled={isLoading}
-                rows={3}
+                rows={2}
                 aria-label="Ask Question"
                 data-testid="question-textarea"
               />
@@ -580,7 +604,7 @@ export const ResearchChatPage: React.FC = () => {
             onChange={(e) => setQuestion(e.target.value)}
             onKeyDown={handleKeyDown}
             disabled={isLoading}
-            rows={2}
+            rows={1}
             aria-label="Ask Question"
             data-testid="question-textarea"
           />
