@@ -39,10 +39,18 @@ class UserResponse(BaseModel):
     full_name: str = Field(description="User full name")
     role: str = Field(description="Assigned role: user, researcher, admin")
     is_active: bool = Field(description="Whether the user account is active")
-    avatar_url: Optional[str] = Field(default=None, description="User avatar image URL")
+    avatar_url: Optional[str] = Field(default=None, description="User avatar image data or URL")
+    phone_number: Optional[str] = Field(default=None, description="Optional phone number")
     auth_provider: str = Field(default="local", description="Registration provider: local, google")
     created_at: datetime = Field(description="Account creation timestamp")
 
+
+class UserProfileUpdate(BaseModel):
+    """Editable fields for the authenticated user's profile."""
+
+    full_name: Optional[str] = Field(default=None, min_length=1, max_length=255)
+    phone_number: Optional[str] = Field(default=None, max_length=32)
+    avatar_url: Optional[str] = Field(default=None, max_length=2_000_000)
 
 class TokenPayload(BaseModel):
     """Internal decoded JWT token payload structure."""

@@ -192,21 +192,38 @@ const ConversationList: React.FC = () => {
           </div>
         )}
 
-        {sorted.map((c) => {
+        {sorted.map((c, index) => {
           const isMenuOpen = activeMenuId === c.id;
+          const showPinnedSection = c.is_pinned && index === 0;
+          const showHistorySection = !c.is_pinned && (index === 0 || sorted[index - 1].is_pinned);
           return (
-            <div key={c.id} className="history-item-wrapper" ref={isMenuOpen ? menuRef : null}>
+            <React.Fragment key={c.id}>
+              {showPinnedSection && (
+                <div className="sidebar-history-group-title" data-testid="pinned-history-section">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="m12 17 5-5V5l1-1H6l1 1v7Z" />
+                    <path d="M12 17v5" />
+                  </svg>
+                  <span>Đã ghim</span>
+                </div>
+              )}
+              {showHistorySection && (
+                <div className="sidebar-history-group-title" data-testid="recent-history-section">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M3 12a9 9 0 1 0 3-6.7" />
+                    <path d="M3 4v5h5" />
+                    <path d="M12 7v5l3 2" />
+                  </svg>
+                  <span>Lịch sử</span>
+                </div>
+              )}
+              <div className="history-item-wrapper" ref={isMenuOpen ? menuRef : null}>
               <NavLink
                 to={`/chat/${c.id}`}
                 className={({ isActive }) => `nav-item history-item ${isActive ? 'active' : ''}`}
                 data-testid={`history-item-${c.id}`}
               >
                 <div className="history-item-content">
-                  {c.is_pinned && (
-                    <span className="pinned-badge" title={t('chat.pin')} aria-label={t('chat.pin')}>
-                      📌
-                    </span>
-                  )}
                   <span className="history-item-title">{c.title || t('chat.newChatBtn')}</span>
                 </div>
 
@@ -269,9 +286,25 @@ const ConversationList: React.FC = () => {
                   </button>
                 </div>
               )}
-            </div>
+              </div>
+            </React.Fragment>
           );
         })}
+        {sorted.every((conversation) => conversation.is_pinned) && (
+          <>
+            <div className="sidebar-history-group-title" data-testid="recent-history-section">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M3 12a9 9 0 1 0 3-6.7" />
+                <path d="M3 4v5h5" />
+                <path d="M12 7v5l3 2" />
+              </svg>
+              <span>Lịch sử</span>
+            </div>
+            <div className="sidebar-history-group-empty" data-testid="history-group-empty">
+              Chưa có cuộc tra cứu nào
+            </div>
+          </>
+        )}
       </div>
     );
   }

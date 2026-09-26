@@ -65,6 +65,7 @@ async def ask_question(
             top_k=request.top_k,
             search_mode=request.search_mode,
             session=db,
+            metadata={"_user_id": str(current_user.id)},
             conversation_history=history_text,
         )
 

@@ -247,6 +247,14 @@ class QAPipeline:
         meta.update(
             {
                 "conflicts": [c.model_dump() for c in conflicts],
+                "_claim_verdicts": {
+                    result.claim_id: {
+                        "verdict": result.verdict.value,
+                        "confidence_score": result.confidence,
+                        "explanation": result.explanation,
+                    }
+                    for result in verification_results
+                },
                 "footnotes_text": citation_summary.footnotes_text,
                 "token_estimate": structured_context.token_count_estimate,
                 "total_retrieval_hits": search_res.total_hits,

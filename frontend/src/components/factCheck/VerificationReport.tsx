@@ -40,8 +40,9 @@ export const VerificationReport: React.FC<VerificationReportProps> = ({
   ).length;
 
   const verifiedClaimsCount = supportedCount + partiallyCount + refutedCount;
-  const coverageRatio = totalClaims > 0 ? verifiedClaimsCount / totalClaims : 0;
-  const coveragePercentage = Math.min(100, Math.max(0, Math.round(coverageRatio * 100)));
+  const coveragePercentage = typeof result.evidence_coverage === 'number'
+    ? Math.min(100, Math.max(0, Math.round(result.evidence_coverage * 100)))
+    : null;
 
   // Count refuting evidence items
   const totalRefutingEvidences = claims.reduce((acc, claim) => {
@@ -122,7 +123,7 @@ export const VerificationReport: React.FC<VerificationReportProps> = ({
             </p>
           </div>
           <div className="coverage-percentage" data-testid="report-coverage-percentage">
-            {coveragePercentage}%
+            {coveragePercentage === null ? '—' : `${coveragePercentage}%`}
           </div>
         </div>
 
@@ -130,7 +131,7 @@ export const VerificationReport: React.FC<VerificationReportProps> = ({
         <div className="coverage-bar-track" aria-label="Evidence coverage percentage bar">
           <div
             className="coverage-bar-fill"
-            style={{ width: `${coveragePercentage}%` }}
+            style={{ width: `${coveragePercentage ?? 0}%` }}
             data-testid="report-coverage-bar-fill"
           />
         </div>

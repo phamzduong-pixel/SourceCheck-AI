@@ -9,10 +9,16 @@ export interface User {
   role: 'user' | 'researcher' | 'admin' | string;
   is_active: boolean;
   avatar_url?: string | null;
+  phone_number?: string | null;
   auth_provider?: string;
   created_at: string;
 }
 
+export interface UserProfileUpdate {
+  full_name?: string;
+  phone_number?: string | null;
+  avatar_url?: string | null;
+}
 export interface LoginCredentials {
   email: string;
   password: string;

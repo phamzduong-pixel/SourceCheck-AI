@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Test Suite for Document Management & Knowledge Base (FE-04.5A).
  */
 
@@ -368,13 +368,13 @@ describe('Documents & Knowledge Base Feature (FE-04.5A)', () => {
 
       // Verify Header & Stats Strip
       expect(screen.getByTestId('viewer-doc-title')).toHaveTextContent('Nghị định số 13/2023/NĐ-CP');
-      expect(screen.getByTestId('viewer-chunks-count')).toHaveTextContent('2 chunks');
-      expect(screen.getByTestId('viewer-ingestion-status')).toHaveTextContent('Đã lập chỉ mục');
+      expect(screen.getByTestId('viewer-chunks-count')).toHaveTextContent('2 đoạn trích');
+      expect(screen.getByTestId('viewer-ingestion-status')).toHaveTextContent('Sẵn sàng sử dụng làm nguồn');
 
       // Verify Chunks Accordion List
       expect(screen.getByTestId('chunk-card-0')).toBeInTheDocument();
       expect(screen.getByTestId('chunk-card-1')).toBeInTheDocument();
-      expect(screen.getByTestId('chunk-index-0')).toHaveTextContent('Chunk #0');
+      expect(screen.getByTestId('chunk-index-0')).toHaveTextContent('Đoạn trích #0');
       expect(screen.getByTestId('chunk-content-0')).toHaveTextContent('Chương I: Những quy định chung');
 
       // Toggle Raw Content tab

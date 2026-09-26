@@ -10,6 +10,7 @@ import {
   RegisterCredentials,
   TokenResponse,
   User,
+  UserProfileUpdate,
 } from '../types/auth';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api/v1';
@@ -185,6 +186,30 @@ export const authService = {
     }
   },
 
+  /**
+   * Update editable fields for the currently authenticated user.
+   */
+  async updateMe(payload: UserProfileUpdate): Promise<User> {
+    const token = getStoredToken();
+    if (!token) {
+      throw new AuthApiError('Chưa đăng nhập.', 401);
+    }
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/me`, {
+        method: 'PATCH',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          Accept: 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+      return await handleResponse<User>(response);
+    } catch (err: any) {
+      if (err instanceof AuthApiError) throw err;
+      throw new AuthApiError('Không thể lưu thông tin hồ sơ. Vui lòng thử lại sau.', 0, err);
+    }
+  },
   /**
    * Request Google OAuth authorization URL from backend.
    */

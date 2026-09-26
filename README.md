@@ -224,3 +224,11 @@ Xem chi tiết kịch bản 8 bước trình diễn sản phẩm tại: [Demo Pr
 - **Dashboard**: statistics come from dashboardService.getStats(). Refresh requests the Dashboard API again and updates statistics, verification distribution, and recent activity.
 
 Frontend validation: cd frontend; run the focused Vitest command documented above, followed by npm run build.
+
+## Recently completed
+
+- **Profile & Settings**: Profile update supports avatar, display name, and phone number through `PATCH /api/v1/auth/me`; email remains account-managed. Settings persist theme, UI/AI language, font size, source visibility, and verification visibility locally.
+- **Verification History**: Users can review recent verification runs, open the persisted report by `request_id`, and inspect claims, verdicts, evidence, citations, and coverage.
+- **Sidebar UX**: The sidebar supports collapse/expand, pinned versus regular conversation history, profile actions, and a centered delete confirmation modal.
+- **Local login compatibility**: Existing fallback SQLite databases are upgraded at startup when profile columns are missing. The demo login `demo@sourcecheck.ai` / `Password123!` has been verified with HTTP 200 after this compatibility fix.
+- **Current status details**: See [Current Completion Status](docs/current-status.md) for the end-to-end user flow, settings, validation, and known boundaries.

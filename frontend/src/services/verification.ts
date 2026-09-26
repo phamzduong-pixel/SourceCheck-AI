@@ -8,6 +8,7 @@ import {
   ClaimExtractRequest,
   ClaimExtractResponse,
   VerificationCreateRequest,
+  VerificationHistoryResponse,
   VerificationResultResponse,
 } from '../types/verification';
 
@@ -34,5 +35,9 @@ export const verificationService = {
    */
   async getVerificationReport(requestId: string): Promise<VerificationResultResponse> {
     return apiClient.get<VerificationResultResponse>(`/verify/${requestId}`);
+  },
+
+  async getHistory(limit = 20): Promise<VerificationHistoryResponse> {
+    return apiClient.get<VerificationHistoryResponse>(`/verify/history?limit=${limit}`);
   },
 };

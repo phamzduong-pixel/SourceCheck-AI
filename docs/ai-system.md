@@ -743,3 +743,28 @@ Pipeline AI được kết nối trực tiếp với bộ benchmark khoa học t
 - **Bộ dữ liệu chuẩn hóa**: 28 ca thực nghiệm bao phủ đầy đủ các trường hợp: có bằng chứng đầy đủ, thiếu bằng chứng (`INSUFFICIENT_EVIDENCE`), có mâu thuẫn chéo giữa các nguồn tài liệu (`CONTRADICTION`), và các query xã giao (`GREETING/IDENTITY`).
 - **Kết quả thực tế**: Đạt độ chính xác 100% (28/28 cases passed), Hit@1 = 1.0, Recall@1 = 1.0, Verification Accuracy = 1.0, và Intent Routing Accuracy = 1.0. Chi tiết xem tại [Evaluation Report](docs/evaluation.md).
 
+
+---
+
+## Current implementation status
+
+Các thành phần user-facing hiện đã được nối với pipeline verification thực tế:
+
+- Luồng hỏi đáp đi qua retrieval, generation, claim extraction, evidence matching, claim-level verification, coverage và citation trước khi hiển thị kết quả.
+- Verdict tổng thể được lưu riêng với verdict của từng claim; khi đọc lại qua `GET /api/v1/verify/{request_id}`, các claim vẫn giữ đúng trạng thái `SUPPORTED`, `PARTIALLY_SUPPORTED`, `REFUTED` hoặc `NOT_ENOUGH_INFO`.
+- Evidence và citation được lấy từ dữ liệu backend; quote, source URL, document và page chỉ được hiển thị khi có dữ liệu thật.
+- Evidence Coverage lấy từ kết quả verification, không được frontend tự tính lại.
+- Verification History đọc các báo cáo đã persistence qua `GET /api/v1/verify/history` và cho phép mở lại báo cáo theo `request_id`.
+- Các thay đổi Profile/Settings, Sidebar và presentation không thay đổi ClaimVerifier, evidence matching, coverage calculation, retrieval strategy hoặc LLM provider.
+
+### Local database compatibility
+
+Database SQLite fallback được khởi tạo trước khi các trường profile được bổ sung có thể thiếu `avatar_url` hoặc `phone_number`. Vì `create_all` không thay đổi bảng đã tồn tại, startup hiện kiểm tra và thêm các cột nullable còn thiếu trước khi thực hiện truy vấn user. Đây là lớp tương thích cho môi trường local; môi trường quản lý bằng Alembic sử dụng migration `004_add_user_profile_fields`.
+
+### Validation reference
+
+- Authentication tests: `14 passed`.
+- Legacy SQLite profile-schema test: `2 passed` trong focused database run.
+- Local demo login sau compatibility check: HTTP `200`.
+
+Chi tiết user flow và giới hạn sản phẩm được ghi tại [Current Completion Status](current-status.md).

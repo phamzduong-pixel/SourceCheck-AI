@@ -207,7 +207,6 @@ describe('Grounded Q&A Core Feature (FE-03)', () => {
 
       // Verify Loading State
       expect(screen.getByTestId('qa-loading-state')).toBeInTheDocument();
-      expect(screen.getByText(/đang thực hiện hybrid search/i)).toBeInTheDocument();
       expect(askBtn).toBeDisabled();
 
       // Resolve API

@@ -12,10 +12,14 @@ import { UILanguage, TranslationKey, translate } from '../i18n';
 export type { UILanguage };
 export type AILanguage = 'vi' | 'en';
 export type ThemeMode = 'light' | 'dark';
+export type FontSize = 'small' | 'medium' | 'large';
 
 export const UI_LANGUAGE_STORAGE_KEY = 'sourcecheck_ui_language';
 export const AI_LANGUAGE_STORAGE_KEY = 'sourcecheck_ai_language';
 export const THEME_STORAGE_KEY = 'sourcecheck_theme';
+export const SHOW_SOURCES_STORAGE_KEY = 'sourcecheck_show_sources';
+export const SHOW_VERIFICATION_STORAGE_KEY = 'sourcecheck_show_verification';
+export const FONT_SIZE_STORAGE_KEY = 'sourcecheck_font_size';
 
 export interface AIPreferencesContextType {
   // UI Language
@@ -28,6 +32,13 @@ export interface AIPreferencesContextType {
   theme: ThemeMode;
   setTheme: (theme: ThemeMode) => void;
   toggleTheme: () => void;
+  fontSize: FontSize;
+  setFontSize: (size: FontSize) => void;
+  // Frontend presentation preferences
+  showSources: boolean;
+  setShowSources: (enabled: boolean) => void;
+  showVerification: boolean;
+  setShowVerification: (enabled: boolean) => void;
   // Active Chat Title (for sticky AppHeader display)
   activeChatTitle: string | null;
   setActiveChatTitle: (title: string | null) => void;
@@ -43,6 +54,12 @@ const defaultContextValue: AIPreferencesContextType = {
   theme: 'light',
   setTheme: () => {},
   toggleTheme: () => {},
+  fontSize: 'medium',
+  setFontSize: () => {},
+  showSources: true,
+  setShowSources: () => {},
+  showVerification: true,
+  setShowVerification: () => {},
   activeChatTitle: null,
   setActiveChatTitle: () => {},
   t: (key, params) => translate(key, 'vi', params),
@@ -94,6 +111,24 @@ export const AIPreferencesProvider: React.FC<{ children: React.ReactNode }> = ({
     return 'light';
   });
 
+  const [fontSize, setFontSizeState] = useState<FontSize>(() => {
+    try {
+      const stored = localStorage.getItem(FONT_SIZE_STORAGE_KEY);
+      if (stored === 'small' || stored === 'medium' || stored === 'large') return stored;
+    } catch {
+      // Ignore localStorage access errors
+    }
+    return 'medium';
+  });
+
+  const setFontSize = useCallback((size: FontSize) => {
+    setFontSizeState(size);
+    try {
+      localStorage.setItem(FONT_SIZE_STORAGE_KEY, size);
+    } catch {
+      // Ignore
+    }
+  }, []);
   const setUILanguage = useCallback((lang: UILanguage) => {
     setUILanguageState(lang);
     try {
@@ -141,7 +176,42 @@ export const AIPreferencesProvider: React.FC<{ children: React.ReactNode }> = ({
     [uiLanguage]
   );
 
-  // 4. Active Chat Title State
+  // 4. Frontend presentation preferences (persisted locally)
+  const [showSources, setShowSourcesState] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(SHOW_SOURCES_STORAGE_KEY) !== 'false';
+    } catch {
+      return true;
+    }
+  });
+
+  const [showVerification, setShowVerificationState] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(SHOW_VERIFICATION_STORAGE_KEY) !== 'false';
+    } catch {
+      return true;
+    }
+  });
+
+  const setShowSources = useCallback((enabled: boolean) => {
+    setShowSourcesState(enabled);
+    try {
+      localStorage.setItem(SHOW_SOURCES_STORAGE_KEY, String(enabled));
+    } catch {
+      // Ignore
+    }
+  }, []);
+
+  const setShowVerification = useCallback((enabled: boolean) => {
+    setShowVerificationState(enabled);
+    try {
+      localStorage.setItem(SHOW_VERIFICATION_STORAGE_KEY, String(enabled));
+    } catch {
+      // Ignore
+    }
+  }, []);
+
+  // 5. Active Chat Title State
   const [activeChatTitle, setActiveChatTitle] = useState<string | null>(null);
 
   // Sync DOM data-theme attribute with state
@@ -151,6 +221,12 @@ export const AIPreferencesProvider: React.FC<{ children: React.ReactNode }> = ({
     }
   }, [theme]);
 
+  // Sync document typography with the persisted preference.
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.setAttribute('data-font-size', fontSize);
+    }
+  }, [fontSize]);
   // Sync DOM lang attribute with uiLanguage
   useEffect(() => {
     if (typeof document !== 'undefined') {
@@ -168,6 +244,12 @@ export const AIPreferencesProvider: React.FC<{ children: React.ReactNode }> = ({
         theme,
         setTheme,
         toggleTheme,
+        fontSize,
+        setFontSize,
+        showSources,
+        setShowSources,
+        showVerification,
+        setShowVerification,
         activeChatTitle,
         setActiveChatTitle,
         t,

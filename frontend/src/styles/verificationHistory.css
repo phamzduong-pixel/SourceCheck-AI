@@ -1,0 +1,18 @@
+.verification-history-page { max-width: 920px; margin: 0 auto; padding: 0.5rem 0 3rem; }
+.verification-history-header { margin-bottom: 1.5rem; }
+.verification-history-header h1 { margin: 0 0 0.4rem; color: var(--color-text-primary); font-size: 1.65rem; }
+.verification-history-header p, .history-answer-preview { margin: 0; color: var(--color-text-secondary); line-height: 1.55; }
+.verification-history-list { display: grid; gap: 0.8rem; }
+.verification-history-item { display: flex; gap: 1rem; align-items: center; justify-content: space-between; padding: 1rem; background: var(--color-bg-surface); border: 1px solid var(--color-border); border-radius: 12px; }
+.history-item-content { min-width: 0; display: grid; gap: 0.45rem; }
+.history-item-meta { display: flex; gap: 0.6rem; align-items: center; color: var(--color-text-muted); font-size: 0.8rem; }
+.history-item-content h2 { margin: 0; font-size: 1rem; color: var(--color-text-primary); }
+.history-answer-preview { font-size: 0.9rem; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.history-coverage { color: var(--color-text-muted); font-size: 0.82rem; }
+.history-view-button, .history-back-button, .history-error button { border: 1px solid var(--color-border); background: var(--color-bg-subtle); color: var(--color-text-primary); border-radius: 8px; padding: 0.55rem 0.8rem; cursor: pointer; white-space: nowrap; }
+.history-view-button:hover, .history-back-button:hover, .history-error button:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.history-state { padding: 1.5rem; text-align: center; color: var(--color-text-secondary); border: 1px dashed var(--color-border); border-radius: 12px; }
+.history-state h2 { margin-top: 0; color: var(--color-text-primary); font-size: 1.05rem; }
+.history-error { color: var(--color-danger, #b91c1c); }
+.verification-history-detail { display: grid; gap: 0.5rem; }
+@media (max-width: 640px) { .verification-history-item { align-items: stretch; flex-direction: column; } .history-view-button { width: 100%; } }

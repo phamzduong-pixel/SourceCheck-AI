@@ -347,3 +347,38 @@ def test_questions_ask_authenticated_allowed(client: TestClient):
         assert body["data"]["status"] == "SUPPORTED"
     finally:
         app.dependency_overrides.pop(get_qa_service, None)
+
+def test_api_update_profile_persists_editable_fields(client: TestClient):
+    """Profile name, phone, and avatar updates persist while email remains account-owned."""
+    registered = client.post(
+        "/api/v1/auth/register",
+        json={"email": "profile@example.com", "password": "Password123!", "full_name": "Initial Name"},
+    )
+    assert registered.status_code == 201
+    login = client.post(
+        "/api/v1/auth/login",
+        json={"email": "profile@example.com", "password": "Password123!"},
+    )
+    token = login.json()["data"]["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+
+    updated = client.patch(
+        "/api/v1/auth/me",
+        headers=headers,
+        json={
+            "full_name": "Updated Name",
+            "phone_number": "+84901234567",
+            "avatar_url": "data:image/png;base64,ZmFrZQ==",
+        },
+    )
+    assert updated.status_code == 200
+    data = updated.json()["data"]
+    assert data["email"] == "profile@example.com"
+    assert data["full_name"] == "Updated Name"
+    assert data["phone_number"] == "+84901234567"
+    assert data["avatar_url"].startswith("data:image/png")
+
+    profile = client.get("/api/v1/auth/me", headers=headers)
+    assert profile.status_code == 200
+    assert profile.json()["data"]["full_name"] == "Updated Name"
+    assert profile.json()["data"]["phone_number"] == "+84901234567"

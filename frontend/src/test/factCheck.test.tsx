@@ -1042,6 +1042,7 @@ describe('Fact-Checking Feature (FE-04.1)', () => {
       overall_verdict: 'MIXED',
       summary: 'Báo cáo tổng hợp: một số nhận định chính xác, một số nhận định sai lệch hoặc chưa đủ căn cứ.',
       claims_count: 4,
+      evidence_coverage: 0.75,
       claims: [
         {
           claim_id: 'claim-c1',

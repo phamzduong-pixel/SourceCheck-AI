@@ -41,11 +41,10 @@ class IntentRouter:
 
     # 2. IDENTITY canned responses
     IDENTITY_RESPONSE = (
-        "Tôi là SourceCheck AI, hệ thống AI hỗ trợ đối soát sự thật và tra cứu tri thức "
-        "có dẫn nguồn minh bạch. Tôi kết hợp công nghệ Hybrid Search (Dense Vector + BM25), "
-        "thuật toán Reciprocal Rank Fusion (RRF), Cross-Encoder Reranker cùng cơ chế phân rã "
-        "và kiểm chứng nhận định độc lập (claim-level verification) nhằm ngăn ngừa ảo giác thông tin. "
-        "Bạn có thể đặt câu hỏi hoặc gửi văn bản để tôi đối soát và trích dẫn bằng chứng xác thực!"
+        "Tôi là SourceCheck AI – trợ lý giúp bạn tìm hiểu và kiểm chứng thông tin có nguồn. "
+        "Bạn có thể đặt câu hỏi, gửi nội dung hoặc tài liệu để tra cứu, đối soát và xem các bằng chứng, "
+        "trích dẫn liên quan. Tôi trả lời dựa trên những nguồn tìm được và cung cấp dẫn chứng để bạn "
+        "có thể kiểm tra lại. Khi chưa có đủ bằng chứng, tôi sẽ nói rõ thay vì tự suy đoán."
     )
 
     # 3. SMALLTALK canned responses

@@ -97,7 +97,7 @@ export const SearchResultCard: React.FC<SearchResultCardProps> = ({
             onViewDetails(hit);
           }}
           data-testid={`btn-view-details-${index}`}
-          aria-label={`Xem chi tiết pipeline cho kết quả #${displayRank}`}
+          aria-label={`Xem chi tiết nguồn cho kết quả #${displayRank}`}
         >
 <span>{t('search.technicalDetails')}</span>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

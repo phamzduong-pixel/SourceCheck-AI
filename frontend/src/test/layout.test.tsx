@@ -176,6 +176,42 @@ describe("App Shell & Layout (FE-02, FE-04.2.1 & FE-04.2.2)", () => {
       expect(screen.getByTestId("dashboard-page")).toBeInTheDocument();
     });
 
+
+    it("toggles desktop sidebar collapse while preserving navigation", () => {
+      render(
+        <MemoryRouter initialEntries={["/"]}>
+          <AuthProvider>
+            <Routes>
+              <Route element={<AppLayout />}>
+                <Route index element={<div data-testid="layout-content">Content</div>} />
+              </Route>
+            </Routes>
+          </AuthProvider>
+        </MemoryRouter>,
+      );
+
+      const appLayout = screen.getByTestId("app-layout");
+      const sidebar = screen.getByTestId("app-sidebar");
+      const toggle = screen.getByTestId("sidebar-brand-toggle");
+      const edgeToggle = screen.getByTestId("sidebar-edge-collapse-toggle");
+      expect(edgeToggle).toBeInTheDocument();
+
+      expect(appLayout).not.toHaveClass("sidebar-collapsed");
+      expect(sidebar).not.toHaveClass("collapsed");
+      fireEvent.click(toggle);
+
+      expect(appLayout).toHaveClass("sidebar-collapsed");
+      expect(sidebar).toHaveClass("collapsed");
+      expect(screen.getByTestId("sidebar-new-chat-btn")).toBeInTheDocument();
+      expect(screen.getByRole("link", { name: /tài liệu/i })).toHaveAttribute("title");
+      expect(toggle).toHaveAttribute("aria-pressed", "true");
+      expect(screen.queryByTestId("sidebar-edge-collapse-toggle")).not.toBeInTheDocument();
+
+      fireEvent.click(toggle);
+      expect(appLayout).not.toHaveClass("sidebar-collapsed");
+      expect(sidebar).not.toHaveClass("collapsed");
+      expect(toggle).toHaveAttribute("aria-pressed", "false");
+    });
     it("toggles mobile menu when toggle button is clicked", async () => {
       render(
         <MemoryRouter initialEntries={["/"]}>
@@ -510,6 +546,30 @@ describe("App Shell & Layout (FE-02, FE-04.2.1 & FE-04.2.2)", () => {
       expect(screen.queryByTestId("user-account-menu")).not.toBeInTheDocument();
     });
 
+    it("opens Settings from the profile menu", async () => {
+      render(
+        <MemoryRouter initialEntries={["/"]}>
+          <AuthProvider>
+            <AIPreferencesProvider>
+              <Routes>
+                <Route element={<AppLayout />}>
+                  <Route index element={<div>Dashboard</div>} />
+                  <Route path="/settings" element={<div data-testid="settings-route">Settings</div>} />
+                  <Route path="/profile" element={<div data-testid="profile-route">Profile</div>} />
+                </Route>
+              </Routes>
+            </AIPreferencesProvider>
+          </AuthProvider>
+        </MemoryRouter>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId("sidebar-user-name")).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByTestId("user-menu-trigger"));
+      fireEvent.click(screen.getByTestId("profile-settings-btn"));
+      expect(screen.getByTestId("settings-route")).toBeInTheDocument();
+    });
     it("closes account menu on Escape key press", async () => {
       render(
         <MemoryRouter initialEntries={["/"]}>
@@ -807,6 +867,60 @@ describe("App Shell & Layout (FE-02, FE-04.2.1 & FE-04.2.2)", () => {
       },
     ];
 
+    it("separates pinned history and moves items when pinning or unpinning", async () => {
+      vi.spyOn(conversationService, "listConversations").mockResolvedValue(
+        mockConvs,
+      );
+      const updateSpy = vi
+        .spyOn(conversationService, "updateConversation")
+        .mockResolvedValueOnce({ ...mockConvs[1], is_pinned: true })
+        .mockResolvedValueOnce({ ...mockConvs[1], is_pinned: false });
+
+      render(
+        <MemoryRouter initialEntries={["/"]}>
+          <AuthProvider>
+            <AIPreferencesProvider>
+              <AppLayout />
+            </AIPreferencesProvider>
+          </AuthProvider>
+        </MemoryRouter>,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId("pinned-history-section")).toBeInTheDocument();
+        expect(screen.getByTestId("recent-history-section")).toBeInTheDocument();
+      });
+
+      const historySection = screen.getByTestId("recent-history-section");
+      const historyItem = screen.getByTestId("history-item-c-2");
+      expect(
+        historySection.compareDocumentPosition(historyItem) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      expect(screen.queryByTestId("pinned-badge-c-2")).not.toBeInTheDocument();
+
+      fireEvent.click(screen.getByTestId("conversation-menu-trigger-c-2"));
+      fireEvent.click(screen.getByTestId("action-pin-c-2"));
+
+      await waitFor(() => {
+        expect(updateSpy).toHaveBeenCalledWith("c-2", { is_pinned: true });
+        const recentSection = screen.getByTestId("recent-history-section");
+        expect(
+          historyItem.compareDocumentPosition(recentSection) & Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy();
+      });
+
+      fireEvent.click(screen.getByTestId("conversation-menu-trigger-c-2"));
+      fireEvent.click(screen.getByTestId("action-pin-c-2"));
+
+      await waitFor(() => {
+        expect(updateSpy).toHaveBeenLastCalledWith("c-2", { is_pinned: false });
+        const recentSection = screen.getByTestId("recent-history-section");
+        expect(
+          recentSection.compareDocumentPosition(screen.getByTestId("history-item-c-2")) &
+            Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy();
+      });
+    });
     it("renders conversation context menu with Rename, Pin, and Delete options", async () => {
       vi.spyOn(conversationService, "listConversations").mockResolvedValue(
         mockConvs,
@@ -868,6 +982,7 @@ describe("App Shell & Layout (FE-02, FE-04.2.1 & FE-04.2.2)", () => {
       expect(
         screen.getByTestId("delete-conversation-modal"),
       ).toBeInTheDocument();
+      expect(screen.getByTestId("delete-conversation-modal-backdrop").parentElement).toBe(document.body);
       expect(screen.getByText(/Xóa cuộc trò chuyện\?/i)).toBeInTheDocument();
       expect(
         screen.getByText(

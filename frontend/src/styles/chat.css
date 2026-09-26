@@ -361,7 +361,7 @@
   position: fixed;
   bottom: 1.25rem;
   left: calc(var(--sidebar-width, 260px) + (100% - var(--sidebar-width, 260px)) / 2);
-  transform: translateX(-50%);
+  transform: translateX(calc(-50% + 1.5rem));
   width: min(780px, calc(100% - var(--sidebar-width, 260px) - 2rem));
   z-index: 40;
   background: var(--color-bg-surface);
@@ -488,38 +488,38 @@
   gap: 0.6rem;
   width: 100%;
   padding: 0.65rem 1rem;
-  background-color: var(--color-bg-surface);
+  background-color: var(--color-bg-sidebar);
   color: var(--color-text-primary);
-  border: 1px solid var(--color-border);
+  border: 1px solid transparent;
   border-radius: var(--radius-md);
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s ease;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: var(--sidebar-shadow-raised);
   text-decoration: none;
   box-sizing: border-box;
 }
 
 .btn-sidebar-new-chat:hover {
-  background-color: var(--color-bg-muted);
-  border-color: var(--color-border-dark);
+  background-color: var(--color-bg-sidebar);
+  border-color: var(--color-sidebar-border);
   color: var(--color-text-primary);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.06);
+  box-shadow: var(--sidebar-shadow-hover);
 }
 
 [data-theme="dark"] .btn-sidebar-new-chat {
   background-color: #262626;
   color: #ececec;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--sidebar-shadow-raised);
 }
 
 [data-theme="dark"] .btn-sidebar-new-chat:hover {
   background-color: #333333;
   border-color: rgba(255, 255, 255, 0.16);
   color: #ffffff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  box-shadow: var(--sidebar-shadow-hover);
 }
 
 .sidebar-history-placeholder {
@@ -546,4 +546,8 @@
   background: rgba(255, 255, 255, 0.03);
   border-color: rgba(255, 255, 255, 0.09);
   color: var(--color-sidebar-muted);
+}
+/* CP-32B: Sidebar new-chat pressed state */
+.app-sidebar .btn-sidebar-new-chat:active {
+  box-shadow: var(--sidebar-shadow-inset);
 }

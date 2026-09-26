@@ -129,3 +129,20 @@ Tài liệu kịch bản trình diễn (Live Demo Walkthrough) từng bước ch
 2. **Minh bạch & Đáng tin cậy**: Mọi nhận định đều có trích dẫn footnote `[1]`, `[2]` mở trực tiếp bằng chứng.
 3. **Hiệu năng & Tiết kiệm**: Intent Router loại bỏ truy vấn thừa; Hybrid RRF + Reranker cho độ chính xác Hit@1 = 100%.
 4. **Trải nghiệm người dùng cao cấp**: Giao diện hoàn thiện Light/Dark Mode, không còn bất kỳ placeholder nào.
+
+## 4. Profile & Settings trong demo
+
+Sau khi đăng nhập, mở User/Profile menu để kiểm tra:
+
+1. **Hồ sơ**: chọn avatar, đổi tên hiển thị hoặc cập nhật số điện thoại rồi lưu. Email hiện tại chỉ đọc.
+2. **Cài đặt**: đổi Sáng/Tối, VI/EN, cỡ chữ và bật/tắt nguồn hoặc thông tin kiểm chứng. Refresh trang để xác nhận các preference giao diện được giữ lại.
+3. **Sidebar**: thử thu gọn/mở rộng, pin một cuộc hội thoại và xác nhận item chuyển giữa `Đã ghim` và `Lịch sử`.
+
+## 5. Kiểm tra khi login local báo lỗi máy chủ
+
+Nếu database SQLite local được tạo từ phiên bản cũ, hãy khởi động lại backend từ thư mục `backend` để startup compatibility check bổ sung các profile column còn thiếu. Tài khoản demo hợp lệ là:
+
+- Email: `demo@sourcecheck.ai`
+- Mật khẩu: `Password123!`
+
+Không cần tạo lại user hoặc sửa frontend để xử lý lỗi schema này. Nếu dùng database được quản lý bằng Alembic, chạy migration `004_add_user_profile_fields` trước khi thử lại.

@@ -10,9 +10,16 @@ import { ThemeToggle } from './ThemeToggle';
 interface SidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
+  isCollapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => {
+export const Sidebar: React.FC<SidebarProps> = ({
+  isOpen = false,
+  onClose,
+  isCollapsed = false,
+  onToggleCollapse,
+}) => {
   const { user, logout } = useAuth();
   const { t } = useAIPreferences();
   const navigate = useNavigate();
@@ -74,25 +81,40 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
     .toUpperCase() || 'U';
 
   return (
-    <aside className={`app-sidebar ${isOpen ? 'open' : ''}`} data-testid="app-sidebar">
+    <aside
+      className={`app-sidebar ${isOpen ? 'open' : ''} ${isCollapsed ? 'collapsed' : ''}`}
+      data-testid="app-sidebar"
+    >
       {/* Brand Header */}
       <div className="sidebar-header">
-        <Link to="/" className="sidebar-brand" onClick={handleNavClick}>
-          <svg
-            className="nav-icon"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+        <div className="sidebar-brand">
+          <button
+            type="button"
+            className="sidebar-brand-toggle"
+            onClick={onToggleCollapse}
+            aria-label={isCollapsed ? "Mở rộng thanh bên" : "Thu gọn thanh bên"}
+            aria-pressed={isCollapsed}
+            title={isCollapsed ? "Mở rộng thanh bên" : "Thu gọn thanh bên"}
+            data-testid="sidebar-brand-toggle"
           >
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            <path d="m9 12 2 2 4-4" />
-          </svg>
-          <span>{t('brand.name')}</span>
-          <span className="sidebar-brand-badge">AI</span>
-        </Link>
+            <svg
+              className="nav-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              <path d="m9 12 2 2 4-4" />
+            </svg>
+          </button>
+          <Link to="/" className="sidebar-brand-link" onClick={handleNavClick}>
+            <span>{t('brand.name')}</span>
+            <span className="sidebar-brand-badge">AI</span>
+          </Link>
+        </div>
       </div>
 
       {/* Prominent '+ Tra cứu mới' Action */}
@@ -103,6 +125,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
           onClick={handleNewChat}
           data-testid="sidebar-new-chat-btn"
           aria-label={t('nav.newChat')}
+          title={t('nav.newChat')}
         >
           <svg
             width="16"
@@ -153,6 +176,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
           <span>{t('nav.dashboard')}</span>
         </NavLink>
 
+        <NavLink
+          to="/verification-history"
+          className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+          onClick={handleNavClick}
+          title="Lịch sử kiểm chứng"
+        >
+          <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M3 12a9 9 0 1 0 3-6.7" />
+            <path d="M3 4v5h5" />
+            <path d="M12 7v5l3 2" />
+          </svg>
+          <span>Lịch sử kiểm chứng</span>
+        </NavLink>
         <NavLink
           to="/fact-check"
           className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
@@ -223,9 +259,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
         {/* Dropdown Popup Menu */}
         {isMenuOpen && (
           <div className="user-account-menu" data-testid="user-account-menu" role="menu">
+            <div className="menu-section-label">{t('settings.profile')}</div>
             <div className="menu-header">
               <div className="menu-user-avatar" aria-hidden="true">
-                {initials}
+                {user?.avatar_url ? <img src={user.avatar_url} alt="" className="sidebar-avatar-image" /> : initials}
               </div>
               <div className="menu-user-info">
                 <span className="menu-user-name" data-testid="dropdown-user-name">
@@ -241,8 +278,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
             </div>
 
             <div className="menu-divider" />
+            <button
+              type="button"
+              className="menu-profile-btn"
+              onClick={() => {
+                setIsMenuOpen(false);
+                navigate('/profile');
+              }}
+              data-testid="profile-open-btn"
+              role="menuitem"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="12" cy="8" r="3" />
+                <path d="M5 20a7 7 0 0 1 14 0" />
+              </svg>
+              <span>{t('settings.profileAction')}</span>
+            </button>
+            <div className="menu-divider" />
 
             {/* Language & Theme Preferences inside User Menu */}
+            <div className="menu-section-label">{t('settings.title')}</div>
             <div className="menu-section">
               <div className="menu-preference-item">
                 <span className="menu-pref-title">{t('user.uiLanguage')}</span>
@@ -257,6 +312,33 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
                 <ThemeToggle />
               </div>
             </div>
+
+            <button
+              type="button"
+              className="menu-settings-btn"
+              onClick={() => {
+                setIsMenuOpen(false);
+                navigate('/settings');
+              }}
+              data-testid="profile-settings-btn"
+              role="menuitem"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="3" />
+                <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-1.7 1.7-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V20h-2.4v-.2a1.7 1.7 0 0 0-1.03-1.56 1.7 1.7 0 0 0-1.88.34l-.06.06-1.7-1.7.06-.06A1.7 1.7 0 0 0 8.4 15a1.7 1.7 0 0 0-1.56-1.03H6v-2.4h.84A1.7 1.7 0 0 0 8.4 10a1.7 1.7 0 0 0-.34-1.88L8 8.06l1.7-1.7.06.06A1.7 1.7 0 0 0 11.64 6.1 1.7 1.7 0 0 0 12.67 4.5V4h2.4v.5A1.7 1.7 0 0 0 16.1 6.1a1.7 1.7 0 0 0 1.88-.34l.06-.06 1.7 1.7-.06.06A1.7 1.7 0 0 0 19.4 10a1.7 1.7 0 0 0 1.56 1.03h.04v2.4h-.04A1.7 1.7 0 0 0 19.4 15Z" />
+              </svg>
+              <span>{t('settings.title')}</span>
+            </button>
 
             <div className="menu-divider" />
 
@@ -300,7 +382,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ isOpen = false, onClose }) => 
             title={t('user.accountSettings')}
           >
             <div className="sidebar-user-avatar" aria-hidden="true">
-              {initials}
+              {user?.avatar_url ? <img src={user.avatar_url} alt="" className="sidebar-avatar-image" /> : initials}
             </div>
 
             <div className="sidebar-user-details">

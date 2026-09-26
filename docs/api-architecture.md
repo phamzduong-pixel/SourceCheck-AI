@@ -268,3 +268,24 @@ Hệ thống phân chia toàn bộ API thành 6 nhóm router độc lập:
 - **URL Paths**: Dùng chữ thường (lowercase) và dấu gạch nối (kebab-case) nếu cần (Ví dụ: `/extract-claims`).
 - **JSON Fields**: Dùng kiểu `snake_case` cho cả request body và response body (Ví dụ: `source_url`, `confidence_score`, `claim_text`).
 - **HTTP Headers**: Sử dụng chuẩn `Kebab-Case` (Ví dụ: `Authorization: Bearer <token>`, `Content-Type: application/json`).
+
+## 6. Profile update và local database compatibility
+
+### 6.1. Cập nhật hồ sơ người dùng
+
+- `PATCH /api/v1/auth/me`: Cập nhật các trường hồ sơ được phép chỉnh sửa của user hiện tại.
+- **Header**: `Authorization: Bearer <access_token>`.
+- **Request body** (tất cả trường đều tùy chọn):
+  ```json
+  {
+    "full_name": "Demo User",
+    "phone_number": "+84901234567",
+    "avatar_url": "data:image/jpeg;base64,..."
+  }
+  ```
+- Email, mật khẩu và role không nằm trong endpoint này. Email được quản lý bởi account/authentication provider.
+- Response trả về `UserResponse` mới, không chứa `hashed_password`.
+
+### 6.2. Database fallback local
+
+Khi chạy local mà database chính không khả dụng, backend dùng SQLite fallback và seed tài khoản demo. Startup kiểm tra các database cũ được tạo trước CP-34 và bổ sung các profile column nullable còn thiếu trước khi chạy truy vấn user. Cơ chế này chỉ nhằm tương thích dữ liệu local; môi trường quản lý bằng Alembic cần chạy migration `004_add_user_profile_fields`.

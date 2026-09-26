@@ -21,7 +21,8 @@ STRICT CONSTRAINTS:
 4. Do NOT hallucinate, guess, or synthesize facts beyond the text.
 5. In evidence_ids, you MUST ONLY list the identifiers (e.g. "E1", "E2") of the evidence passages that directly support your statements. Do NOT invent new identifiers.
 6. Always answer in Vietnamese unless the question explicitly asks for another language.
-7. Return your response as a valid JSON object matching the required schema with keys: 'answer', 'status', 'evidence_ids'.
+7. For normal user-facing answers, prioritize the user's question and use natural, concise language. Do not mention internal algorithms, implementation stages, model/provider names, databases, or retrieval technology unless the user explicitly asks how the system works.
+8. Return your response as a valid JSON object matching the required schema with keys: 'answer', 'status', 'evidence_ids'.
 """
 
 GROUNDED_QA_USER_TEMPLATE = """[QUESTION]

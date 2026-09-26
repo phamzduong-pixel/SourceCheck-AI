@@ -90,7 +90,7 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
                 <th>Tài liệu</th>
                 <th>Loại file</th>
                 <th>Trạng thái</th>
-                <th>Số Chunks</th>
+                <th>Số đoạn trích</th>
                 <th>Ngày tạo</th>
                 <th style={{ textAlign: 'right' }}>Thao tác</th>
               </tr>
@@ -152,7 +152,7 @@ export const DocumentTable: React.FC<DocumentTableProps> = ({
                         type="button"
                         className="btn-table-action view"
                         onClick={() => onViewDocument(doc.id)}
-                        title="Xem chi tiết và các chunks"
+                        title="Xem chi tiết tài liệu"
                         data-testid={`btn-view-doc-${doc.id}`}
                       >
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

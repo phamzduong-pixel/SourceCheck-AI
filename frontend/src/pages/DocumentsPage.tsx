@@ -194,7 +194,7 @@ export const DocumentsPage: React.FC = () => {
       {isLoadingDetail && (
         <div className="detail-loading-indicator" data-testid="detail-loading-indicator">
           <div className="spinner" style={{ width: '20px', height: '20px', borderWidth: '2px' }} />
-          <span>Đang tải thông tin chi tiết và chunks...</span>
+          <span>Đang tải thông tin chi tiết...</span>
         </div>
       )}
 
@@ -219,8 +219,8 @@ export const DocumentsPage: React.FC = () => {
           </div>
           <h3>Chưa có tài liệu nào trong Cơ sở tri thức</h3>
           <p>
-            Tải lên các tài liệu PDF, DOCX hoặc TXT để hệ thống tự động phân tách chunks,
-            tạo vector embeddings và phục vụ quá trình kiểm chứng thông tin.
+            Tải lên PDF, DOCX hoặc TXT để bắt đầu xây dựng bộ nguồn tham khảo,
+            phục vụ việc hỏi đáp và kiểm chứng thông tin.
           </p>
           <button
             type="button"
@@ -328,7 +328,7 @@ export const DocumentsPage: React.FC = () => {
               Bạn có chắc chắn muốn xóa tài liệu <strong>"{documentToDelete.title}"</strong> (ID: <code style={{ fontSize: '0.8rem' }}>{documentToDelete.id}</code>)?
             </p>
             <p className="delete-modal-warning">
-              Toàn bộ chunks và vector embeddings liên quan sẽ bị xóa khỏi cơ sở tri thức. Dữ liệu lịch sử kiểm chứng vẫn được bảo toàn nguyên vẹn.
+              Toàn bộ nội dung liên quan của tài liệu sẽ bị xóa khỏi bộ nguồn. Dữ liệu lịch sử kiểm chứng vẫn được bảo toàn nguyên vẹn.
             </p>
 
             <div className="delete-modal-actions">

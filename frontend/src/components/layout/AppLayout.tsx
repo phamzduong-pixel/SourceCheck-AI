@@ -11,6 +11,7 @@ import '../../styles/layout.css';
 
 export const AppLayout: React.FC = () => {
   const [isMobileOpen, setIsMobileOpen] = useState<boolean>(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
   const location = useLocation();
   const { t, activeChatTitle } = useAIPreferences();
 
@@ -25,13 +26,18 @@ export const AppLayout: React.FC = () => {
     if (pathname.startsWith('/documents')) return t('nav.documents');
     if (pathname.startsWith('/search')) return t('nav.search');
     if (pathname.startsWith('/dashboard')) return t('nav.dashboard');
+    if (pathname.startsWith('/settings')) return t('settings.title');
+    if (pathname.startsWith('/profile')) return t('settings.profile');
     return 'SourceCheck AI';
   };
 
   const currentTitle = getPageTitle(location.pathname);
 
   return (
-    <div className="app-container" data-testid="app-layout">
+    <div
+      className={`app-container ${isSidebarCollapsed ? 'sidebar-collapsed' : ''}`}
+      data-testid="app-layout"
+    >
       {/* Mobile Drawer Backdrop */}
       {isMobileOpen && (
         <div
@@ -45,7 +51,23 @@ export const AppLayout: React.FC = () => {
       <Sidebar
         isOpen={isMobileOpen}
         onClose={() => setIsMobileOpen(false)}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={() => setIsSidebarCollapsed((prev) => !prev)}
       />
+      {!isMobileOpen && !isSidebarCollapsed && (
+        <button
+          type="button"
+          className="sidebar-edge-collapse-toggle"
+          onClick={() => setIsSidebarCollapsed(true)}
+          aria-label="Thu gọn thanh bên"
+          title="Thu gọn thanh bên"
+          data-testid="sidebar-edge-collapse-toggle"
+        >
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m15 6-6 6 6 6" />
+          </svg>
+        </button>
+      )}
 
       {/* Main Workspace Area */}
       <div className="app-main">

@@ -68,14 +68,14 @@ export const SearchPage: React.FC = () => {
         if (err.statusCode === 401) {
           setError('Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại.');
         } else if (err.statusCode >= 500) {
-          setError('Máy chủ gặp lỗi khi thực thi retrieval (500). Vui lòng thử lại sau.');
+          setError('Không thể tìm nguồn lúc này. Vui lòng thử lại sau.');
         } else if (err.statusCode === 0) {
           setError('Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại kết nối mạng.');
         } else {
           setError(err.message || 'Lỗi khi thực hiện tìm kiếm.');
         }
       } else {
-        setError(err?.message || 'Đã xảy ra lỗi không xác định trong quá trình retrieval.');
+        setError(err?.message || 'Đã xảy ra lỗi khi tìm nguồn.');
       }
     } finally {
       setIsLoading(false);

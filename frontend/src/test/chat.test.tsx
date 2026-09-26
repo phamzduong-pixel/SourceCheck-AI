@@ -310,7 +310,6 @@ describe('Main Research Chat Feature (FE-CHAT-01)', () => {
 
       // Loading state visible
       expect(screen.getByTestId('qa-loading-state')).toBeInTheDocument();
-      expect(screen.getByText(/Đang thực hiện Hybrid Search và kiểm chứng nguồn/i)).toBeInTheDocument();
 
       // Resolve API
       resolvePromise(mockFinalAnswer);

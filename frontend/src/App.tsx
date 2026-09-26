@@ -11,6 +11,9 @@ import { FactCheckPage } from './pages/FactCheckPage';
 import { DocumentsPage } from './pages/DocumentsPage';
 import { ResearchChatPage } from './pages/ResearchChatPage';
 import { SearchPage } from './pages/SearchPage';
+import { VerificationHistoryPage } from './pages/VerificationHistoryPage';
+import { SettingsPage } from './pages/SettingsPage';
+import { ProfilePage } from './pages/ProfilePage';
 
 export default function App() {
   return (
@@ -56,6 +59,9 @@ export default function App() {
             <Route path="/fact-check" element={<FactCheckPage />} />
             <Route path="/documents" element={<DocumentsPage />} />
             <Route path="/search" element={<SearchPage />} />
+            <Route path="/verification-history" element={<VerificationHistoryPage />} />
+            <Route path="/settings" element={<SettingsPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
           </Route>
 
           {/* Fallback route */}

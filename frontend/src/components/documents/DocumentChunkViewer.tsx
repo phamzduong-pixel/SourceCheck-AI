@@ -98,15 +98,15 @@ export const DocumentChunkViewer: React.FC<DocumentChunkViewerProps> = ({
             </span>
           </div>
           <div className="viewer-stat-item">
-            <span className="stat-label">Tổng số Chunks:</span>
+            <span className="stat-label">Tổng số đoạn trích:</span>
             <span className="stat-value highlight" data-testid="viewer-chunks-count">
-              {chunks.length} chunks
+              {chunks.length} đoạn trích
             </span>
           </div>
           <div className="viewer-stat-item">
             <span className="stat-label">Trạng thái:</span>
             <span className="stat-value status-ready" data-testid="viewer-ingestion-status">
-              ● Đã lập chỉ mục & sẵn sàng RAG
+              ● Sẵn sàng sử dụng làm nguồn
             </span>
           </div>
           <div className="viewer-stat-item">
@@ -147,7 +147,7 @@ export const DocumentChunkViewer: React.FC<DocumentChunkViewerProps> = ({
               <rect x="14" y="14" width="7" height="7" />
               <rect x="3" y="14" width="7" height="7" />
             </svg>
-            <span>Phân rã Chunks ({chunks.length})</span>
+            <span>Các đoạn trích ({chunks.length})</span>
           </button>
           <button
             type="button"
@@ -161,7 +161,7 @@ export const DocumentChunkViewer: React.FC<DocumentChunkViewerProps> = ({
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
               <polyline points="14 2 14 8 20 8" />
             </svg>
-            <span>Nội dung gốc (Raw Content)</span>
+            <span>Nội dung đầy đủ</span>
           </button>
           <button
             type="button"
@@ -176,7 +176,7 @@ export const DocumentChunkViewer: React.FC<DocumentChunkViewerProps> = ({
               <path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3" />
               <path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5" />
             </svg>
-            <span>Metadata & Cấu hình</span>
+            <span>Thông tin tài liệu & Cấu hình</span>
           </button>
         </div>
 
@@ -188,20 +188,20 @@ export const DocumentChunkViewer: React.FC<DocumentChunkViewerProps> = ({
               <div className="chunks-search-row">
                 <input
                   type="text"
-                  placeholder="Lọc chunks theo nội dung hoặc chỉ số index..."
+                  placeholder="Lọc đoạn trích theo nội dung..."
                   value={chunkSearch}
                   onChange={(e) => setChunkSearch(e.target.value)}
                   className="chunks-filter-input"
                   data-testid="chunk-filter-input"
                 />
                 <span className="chunks-filtered-count">
-                  {filteredChunks.length} / {chunks.length} chunks
+                  {filteredChunks.length} / {chunks.length} đoạn trích
                 </span>
               </div>
 
               {filteredChunks.length === 0 ? (
                 <div className="no-chunks-notice" data-testid="no-chunks-match">
-                  Không tìm thấy chunk nào phù hợp.
+                  Không tìm thấy đoạn trích phù hợp.
                 </div>
               ) : (
                 <div className="chunks-list" data-testid="chunks-accordion-list">
@@ -226,7 +226,7 @@ export const DocumentChunkViewer: React.FC<DocumentChunkViewerProps> = ({
                         >
                           <div className="chunk-header-left">
                             <span className="chunk-index-badge" data-testid={`chunk-index-${chunk.chunk_index}`}>
-                              Chunk #{chunk.chunk_index}
+                              Đoạn trích #{chunk.chunk_index}
                             </span>
                             <span className="chunk-char-count">{charCount} ký tự</span>
                             {meta.page_number !== undefined && (
@@ -257,7 +257,7 @@ export const DocumentChunkViewer: React.FC<DocumentChunkViewerProps> = ({
 
                           {meta && Object.keys(meta).length > 0 && (
                             <div className="chunk-metadata-box" data-testid={`chunk-meta-${chunk.chunk_index}`}>
-                              <strong>Chunk Metadata:</strong>
+                              <strong>Đoạn trích Thông tin tài liệu:</strong>
                               <pre>{JSON.stringify(meta, null, 2)}</pre>
                             </div>
                           )}
@@ -279,7 +279,7 @@ export const DocumentChunkViewer: React.FC<DocumentChunkViewerProps> = ({
                 </pre>
               ) : (
                 <div className="no-chunks-notice" data-testid="no-raw-content">
-                  Không có nội dung thô (Raw content) được lưu trữ cho tài liệu này.
+                  Không có nội dung thô (Nội dung đầy đủ) được lưu trữ cho tài liệu này.
                 </div>
               )}
             </div>
@@ -290,7 +290,7 @@ export const DocumentChunkViewer: React.FC<DocumentChunkViewerProps> = ({
             <div className="metadata-tab" data-testid="metadata-tab-container">
               <div className="metadata-grid">
                 <div className="meta-field">
-                  <span className="meta-key">Document ID:</span>
+                  <span className="meta-key">Mã tài liệu:</span>
                   <code className="meta-val-code" data-testid="meta-val-id">{document.id}</code>
                 </div>
                 <div className="meta-field">
@@ -306,7 +306,7 @@ export const DocumentChunkViewer: React.FC<DocumentChunkViewerProps> = ({
                   <span className="meta-val">{document.publisher || 'Không có'}</span>
                 </div>
                 <div className="meta-field">
-                  <span className="meta-key">Source URL:</span>
+                  <span className="meta-key">Đường dẫn nguồn:</span>
                   <span className="meta-val">{document.source_url || 'Không có'}</span>
                 </div>
                 <div className="meta-field">
@@ -323,7 +323,7 @@ export const DocumentChunkViewer: React.FC<DocumentChunkViewerProps> = ({
 
               {document.doc_metadata && Object.keys(document.doc_metadata).length > 0 && (
                 <div className="raw-metadata-json-section">
-                  <h4>Custom Metadata (JSON)</h4>
+                  <h4>Thông tin bổ sung</h4>
                   <pre className="raw-content-pre" data-testid="doc-custom-metadata-pre">
                     {JSON.stringify(document.doc_metadata, null, 2)}
                   </pre>

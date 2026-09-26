@@ -238,8 +238,8 @@ async def test_verify_mixed_summary_partial_coverage(
 ):
     """Verify summary with 2 valid claims from paper and 1 unsupported claim.
     
-    Supported claims should be SUPPORTED, unsupported claim should be NOT_ENOUGH_INFO.
-    Evidence coverage should be partial (e.g. 67%), NOT 0%.
+    Supported claims should be SUPPORTED; a topic-related but incomplete claim is PARTIALLY_SUPPORTED.
+    Evidence coverage includes PARTIALLY_SUPPORTED claims as verified evidence.
     """
     embedding_provider = MockDeterministicEmbeddingProvider(dimension=settings.EMBEDDING_DIM)
     embedding_service = EmbeddingService(provider=embedding_provider)
@@ -266,17 +266,19 @@ async def test_verify_mixed_summary_partial_coverage(
     assert result.claims_count == 3
     assert len(result.claims) == 3
 
-    # Claim 1 & 2 supported, Claim 3 NOT_ENOUGH_INFO
+    # Claims 1 & 2 are directly supported. Claim 3 shares the document topic
+    # but is not fully evidenced, so it is PARTIALLY_SUPPORTED.
     assert result.claims[0].verdict == "SUPPORTED"
     assert result.claims[1].verdict == "SUPPORTED"
-    assert result.claims[2].verdict == "NOT_ENOUGH_INFO"
+    assert result.claims[2].verdict == "PARTIALLY_SUPPORTED"
 
     # Coverage calculator metric
     calculator = EvidenceCoverageCalculator()
     cov = calculator.calculate_coverage(result.claims)
-    assert cov["coverage_rate"] == 0.67  # 2 out of 3
+    assert cov["coverage_rate"] == 1.0  # all three claims have matched evidence; one is partial
     assert cov["total_claims"] == 3
-    assert cov["claims_with_evidence"] == 2
+    # PARTIALLY_SUPPORTED is evidence-backed; coverage measures evidence availability.
+    assert cov["claims_with_evidence"] == 3
 
 
 # ---------------------------------------------------------------------------

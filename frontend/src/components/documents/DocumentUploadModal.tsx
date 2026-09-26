@@ -92,7 +92,7 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
       });
 
       setSuccessMessage(
-        `Tài liệu "${response.title}" đã được nạp thành công với ${response.total_chunks} chunks!`
+        `Tài liệu "${response.title}" đã được tải lên thành công!`
       );
 
       setTimeout(() => {
@@ -239,31 +239,13 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
           {/* Configuration Options */}
           <div className="upload-options-grid">
             <div className="option-field">
-              <label htmlFor="chunk-strategy-select" className="option-label">
-                Chiến lược phân tách Chunks
-              </label>
-              <select
-                id="chunk-strategy-select"
-                className="option-select"
-                value={chunkStrategy}
-                onChange={(e) => setChunkStrategy(e.target.value)}
-                disabled={isUploading}
-                data-testid="chunk-strategy-select"
-              >
-                <option value="fixed">Cố định (Fixed Window - 500 ký tự / 50 overlap)</option>
-                <option value="sentence">Theo câu & đoạn văn (Sentence Splitter)</option>
-                <option value="recursive">Ngữ nghĩa đệ quy (Recursive Character)</option>
-              </select>
-            </div>
-
-            <div className="option-field">
               <label htmlFor="source-id-input" className="option-label">
-                Source ID / Nhãn nguồn (Tùy chọn)
+                Nhãn nguồn (tuỳ chọn)
               </label>
               <input
                 id="source-id-input"
                 type="text"
-                placeholder="Ví dụ: bct-2024-report hoặc để trống"
+                placeholder="Ví dụ: báo cáo-2024 hoặc để trống"
                 value={sourceId}
                 onChange={(e) => setSourceId(e.target.value)}
                 disabled={isUploading}
@@ -299,7 +281,7 @@ export const DocumentUploadModal: React.FC<DocumentUploadModalProps> = ({
           {isUploading && (
             <div className="upload-loading-state" data-testid="upload-loading-state">
               <div className="spinner" style={{ width: '24px', height: '24px', borderWidth: '2.5px' }} />
-              <p>Đang tải lên, trích xuất văn bản và phân tách chunks...</p>
+              <p>Đang tải lên và chuẩn bị nội dung tài liệu...</p>
             </div>
           )}
         </div>

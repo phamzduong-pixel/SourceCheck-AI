@@ -66,6 +66,24 @@ export interface VerificationResultResponse {
   summary?: string | null;
   claims_count: number;
   claims: VerifiedClaimItem[];
+  /** Coverage supplied by the verification API when available. */
+  evidence_coverage?: number | null;
   created_at: string;
   completed_at?: string | null;
+}
+
+export interface VerificationHistoryItem {
+  request_id: string;
+  question: string;
+  answer_preview?: string | null;
+  overall_verdict: OverallVerdict;
+  status: string;
+  evidence_coverage: number;
+  created_at: string;
+}
+
+export interface VerificationHistoryResponse {
+  items: VerificationHistoryItem[];
+  skip: number;
+  limit: number;
 }

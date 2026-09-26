@@ -1,7 +1,7 @@
 """Database initialization, engine, sessionmaker, and connection utilities."""
 
 from typing import AsyncGenerator
-from sqlalchemy import text, select
+from sqlalchemy import inspect, text, select
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -101,12 +101,27 @@ async def init_vector_extension() -> None:
         logger.warning(f"Could not enable pgvector extension (may already exist or non-postgres): {exc}")
 
 
+def _ensure_user_profile_columns(sync_conn) -> None:
+    """Add profile columns to legacy local databases created before CP-34.
+
+    ``create_all`` does not alter existing tables, so a pre-existing fallback
+    SQLite database can otherwise make every user query fail after the model
+    gains a new nullable profile field.
+    """
+    columns = {column["name"] for column in inspect(sync_conn).get_columns("users")}
+    if "avatar_url" not in columns:
+        sync_conn.execute(text("ALTER TABLE users ADD COLUMN avatar_url TEXT"))
+    if "phone_number" not in columns:
+        sync_conn.execute(text("ALTER TABLE users ADD COLUMN phone_number VARCHAR(32)"))
+
+
 async def init_db() -> None:
     """Initialize database tables and create default seed user."""
     # Always ensure fallback SQLite has tables and seed user ready
     try:
         async with _fallback_sqlite_engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+            await conn.run_sync(_ensure_user_profile_columns)
 
         from app.models.user import User
         from app.core.security import get_password_hash

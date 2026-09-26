@@ -10,15 +10,25 @@ interface AnswerRendererProps {
   answerText: string;
   citations: CitationItem[];
   onCitationClick: (citation: CitationItem) => void;
+  showCitations?: boolean;
 }
 
 export const AnswerRenderer: React.FC<AnswerRendererProps> = ({
   answerText,
   citations,
   onCitationClick,
+  showCitations = true,
 }) => {
   if (!answerText) {
     return null;
+  }
+
+  if (!showCitations) {
+    return (
+      <div className="answer-body" data-testid="answer-rendered-text">
+        {answerText.replace(/\[\d+\]/g, '').replace(/\s{2,}/g, ' ').trim()}
+      </div>
+    );
   }
 
   // Create lookup map from footnote_index to CitationItem

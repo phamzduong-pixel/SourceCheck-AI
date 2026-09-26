@@ -298,3 +298,23 @@ Tài liệu đặc tả toàn bộ danh mục tính năng của hệ thống Sou
 - Frontend builds are validated with tsc && vite build.
 - Focused tests cover Chat, Sidebar, Search, Documents, Verification, auth, Dashboard, and conversation persistence/isolation.
 - These updates do not change the RAG pipeline, verification algorithms, or authentication architecture.
+
+---
+
+## 14. Hồ sơ người dùng và Cài đặt (CP-34)
+
+- **Hồ sơ**: User có thể xem avatar, tên hiển thị và email; chọn avatar, đổi tên và thêm/sửa số điện thoại. Email tài khoản do authentication provider quản lý nên không chỉnh sửa trong UI.
+- **Lưu hồ sơ**: Frontend gọi `PATCH /api/v1/auth/me`; backend trả lại `UserResponse` đã cập nhật để Sidebar/Profile menu đồng bộ.
+- **Cài đặt giao diện**: Theme Sáng/Tối, ngôn ngữ UI VI/EN và cỡ chữ Nhỏ/Vừa/Lớn có hiệu lực trực tiếp trên app và được lưu cục bộ.
+- **Cài đặt trả lời**: Có thể bật/tắt hiển thị nguồn/dẫn chứng và thông tin kiểm chứng. Các toggle chỉ thay đổi presentation frontend, không thay đổi verification pipeline.
+- **Giới hạn có chủ đích**: Không tạo TTS mới, không giả lập xóa dữ liệu server bằng localStorage và không thêm các setting kỹ thuật như provider/model/embedding.
+
+## 15. Lịch sử kiểm chứng và trải nghiệm Sidebar
+
+- Khu vực Verification History dùng dữ liệu thật từ `GET /api/v1/verify/history` và mở lại báo cáo bằng `GET /api/v1/verify/{request_id}`.
+- Sidebar hỗ trợ collapse/expand, tooltip cho icon, nhóm `Đã ghim`/`Lịch sử`, pin/unpin và profile menu.
+- Delete confirmation modal được căn giữa toàn viewport; các trạng thái loading, empty và error có wording hướng dẫn người dùng.
+
+## 16. Tương thích database local và đăng nhập
+
+Các database SQLite fallback được tạo trước khi có trường profile có thể thiếu `avatar_url` hoặc `phone_number`, vì `create_all` không alter bảng hiện hữu. Startup hiện kiểm tra và thêm các cột nullable còn thiếu trước khi truy vấn user. Đây là lớp tương thích local, không thay đổi authentication hoặc verification logic. Migration chính thức cho môi trường có Alembic là `004_add_user_profile_fields`.

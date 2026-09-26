@@ -59,3 +59,21 @@ class VerificationResultResponse(BaseModel):
     claims: List[VerifiedClaimItem] = []
     created_at: datetime
     completed_at: Optional[datetime] = None
+
+
+class VerificationHistoryItem(BaseModel):
+    """Compact user-facing summary of a persisted verification."""
+
+    request_id: uuid.UUID
+    question: str
+    answer_preview: Optional[str] = None
+    overall_verdict: str
+    status: str
+    evidence_coverage: float = Field(default=0.0, ge=0.0, le=1.0)
+    created_at: datetime
+
+
+class VerificationHistoryResponse(BaseModel):
+    items: List[VerificationHistoryItem] = []
+    skip: int = 0
+    limit: int = 20

@@ -22,6 +22,7 @@ from app.schemas.auth import (
     UserLoginRequest,
     UserRegisterRequest,
     UserResponse,
+    UserProfileUpdate,
 )
 from app.schemas.common import APIResponse
 from app.services.auth_service import AuthService
@@ -125,6 +126,28 @@ async def get_current_user_profile(
     )
 
 
+@router.patch(
+    "/me",
+    response_model=APIResponse[UserResponse],
+    status_code=status.HTTP_200_OK,
+    summary="Update the currently authenticated user's profile",
+)
+async def update_current_user_profile(
+    request: UserProfileUpdate,
+    current_user: User = Depends(get_current_active_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Update editable profile fields without changing account email or provider identity."""
+    if request.full_name is not None:
+        current_user.full_name = request.full_name.strip()
+    if request.phone_number is not None:
+        current_user.phone_number = request.phone_number.strip() or None
+    if request.avatar_url is not None:
+        current_user.avatar_url = request.avatar_url or None
+
+    await db.commit()
+    await db.refresh(current_user)
+    return APIResponse(success=True, data=UserResponse.model_validate(current_user))
 @router.get(
     "/google/login",
     response_model=APIResponse[GoogleLoginResponse],

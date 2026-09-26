@@ -7,7 +7,7 @@ Alembic migration generation (upgrade & downgrade), and vector column definition
 import sys
 import uuid
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
 from sqlalchemy.orm import sessionmaker
@@ -30,6 +30,7 @@ def _compile_vector_sqlite(type_, compiler, **kw):
 
 
 from app.core.config import settings
+from app.core.database import _ensure_user_profile_columns
 from app.models.base import Base
 from app.models.user import User
 from app.models.source import Source
@@ -256,3 +257,14 @@ def test_cascade_deletion(db_session):
     # Claim should be deleted via cascade
     deleted_claim = db_session.get(Claim, claim_id)
     assert deleted_claim is None
+
+
+def test_legacy_sqlite_users_table_gets_profile_columns():
+    """Existing local databases remain readable after profile fields are added."""
+    engine = create_engine("sqlite:///:memory:")
+    with engine.begin() as connection:
+        connection.execute(text("CREATE TABLE users (id INTEGER PRIMARY KEY, email VARCHAR(255) NOT NULL)"))
+        _ensure_user_profile_columns(connection)
+        columns = {row[1] for row in connection.execute(text("PRAGMA table_info(users)"))}
+
+    assert {"avatar_url", "phone_number"}.issubset(columns)

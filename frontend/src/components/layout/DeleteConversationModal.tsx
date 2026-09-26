@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { useAIPreferences } from '../../hooks/useAIPreferences';
 
 interface DeleteConversationModalProps {
@@ -18,7 +19,7 @@ export const DeleteConversationModal: React.FC<DeleteConversationModalProps> = (
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="modal-backdrop" data-testid="delete-conversation-modal-backdrop">
       <div
         className="modal-dialog delete-confirmation-modal"
@@ -65,7 +66,8 @@ export const DeleteConversationModal: React.FC<DeleteConversationModalProps> = (
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

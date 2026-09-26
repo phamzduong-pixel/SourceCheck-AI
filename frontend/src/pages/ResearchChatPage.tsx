@@ -8,12 +8,15 @@ import React, { useState, useEffect, useRef, useContext } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import conversationService from '../services/conversations';
 import { qaService } from '../services/qa';
+import { verificationService } from '../services/verification';
 import { FinalAnswerResponse, CitationItem } from '../types/qa';
+import { VerificationResultResponse } from '../types/verification';
 import { ApiClientError } from '../services/apiClient';
 import { AnswerRenderer } from '../components/qa/AnswerRenderer';
 import { EvidenceCoverageCard } from '../components/qa/EvidenceCoverageCard';
 import { ClaimList } from '../components/qa/ClaimList';
 import { EvidenceDrawer } from '../components/qa/EvidenceDrawer';
+import { VerificationResultCard } from '../components/qa/VerificationResultCard';
 import { useAIPreferences } from '../hooks/useAIPreferences';
 import { AuthContext } from '../context/AuthContext';
 import '../styles/qa.css';
@@ -30,10 +33,11 @@ export interface ChatTurn {
   question: string;
   response: FinalAnswerResponse;
   timestamp: string;
+  verificationReport?: VerificationResultResponse;
 }
 
 export const ResearchChatPage: React.FC = () => {
-  const { t, setActiveChatTitle } = useAIPreferences();
+  const { t, setActiveChatTitle, showSources, showVerification } = useAIPreferences();
   const authContext = useContext(AuthContext);
   const user = authContext?.user;
 
@@ -298,6 +302,21 @@ export const ResearchChatPage: React.FC = () => {
 
       setTurns((prev) => [...prev, newTurn]);
 
+      // The ask response is the primary display payload. When it carries the
+      // persisted report ID, hydrate its canonical /verify representation too.
+      const requestId = response.metadata?.request_id || response.metadata?.verification_result_id;
+      if (typeof requestId === 'string' && requestId) {
+        verificationService.getVerificationReport(requestId)
+          .then((verificationReport) => {
+            setTurns((prev) => prev.map((turn) => (
+              turn.id === newTurn.id ? { ...turn, verificationReport } : turn
+            )));
+          })
+          // The answer response already contains usable verification data; a
+          // missing historical report must not make the chat answer fail.
+          .catch(() => undefined);
+      }
+
       // Notify sidebar to update conversation list (e.g. order of updated_at)
       window.dispatchEvent(new CustomEvent('sourcecheck:refresh-conversations'));
     } catch (err: any) {
@@ -552,13 +571,14 @@ export const ResearchChatPage: React.FC = () => {
                         {/* Grounded Answer with Citations */}
                         <AnswerRenderer
                           answerText={res.answer}
-                          citations={res.citations || []}
+                          citations={showSources ? res.citations || [] : []}
                           onCitationClick={(cit) => handleCitationClick(cit, turn.id)}
+                          showCitations={showSources}
                         />
                       </div>
 
                       {/* Evidence Coverage */}
-                      {typeof res.evidence_coverage === 'number' && (
+                      {showVerification && typeof res.evidence_coverage === 'number' && (
                         <EvidenceCoverageCard
                           coverage={res.evidence_coverage}
                           status={res.status}
@@ -567,12 +587,16 @@ export const ResearchChatPage: React.FC = () => {
                       )}
 
                       {/* Claims Breakdown */}
-                      {res.claims && res.claims.length > 0 && (
+                      {showVerification && res.claims && res.claims.length > 0 && (
                         <ClaimList
                           claims={res.claims}
-                          citations={res.citations || []}
+                          citations={showSources ? res.citations || [] : []}
                           onCitationClick={(cit) => handleCitationClick(cit, turn.id)}
                         />
+                      )}
+
+                      {showVerification && turn.verificationReport && (
+                        <VerificationResultCard report={turn.verificationReport} />
                       )}
                     </div>
                   </div>

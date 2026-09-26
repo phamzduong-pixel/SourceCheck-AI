@@ -170,8 +170,21 @@ def test_identity_detection(intent_router: IntentRouter, query: str):
     assert res.is_matched is True
     assert res.intent == IntentType.IDENTITY
     assert res.canned_response is not None
-    assert "SourceCheck AI" in res.canned_response
-    assert "Hybrid Search" in res.canned_response
+    response_text = res.canned_response
+    assert "SourceCheck AI" in response_text
+    assert "tra cứu" in response_text
+    assert "kiểm chứng" in response_text
+    assert "bằng chứng" in response_text
+    assert "đủ bằng chứng" in response_text
+    for technical_term in (
+        "Hybrid Search",
+        "Dense Vector",
+        "BM25",
+        "RRF",
+        "Cross-Encoder",
+        "claim-level verification",
+    ):
+        assert technical_term.lower() not in response_text.lower()
 
 
 @pytest.mark.parametrize(
@@ -282,7 +295,7 @@ async def test_pipeline_identity_bypasses_retrieval_and_llm(mock_retrieval_servi
     response = await pipeline.run("bạn là ai")
 
     assert response.status == FinalAnswerStatus.SUPPORTED
-    assert "trợ lý AI chuyên về kiểm chứng" in response.answer or "hệ thống AI hỗ trợ đối soát sự thật" in response.answer
+    assert "tìm hiểu và kiểm chứng thông tin có nguồn" in response.answer
     assert response.metadata.get("intent") == "IDENTITY"
 
     mock_retrieval_service.search.assert_not_called()

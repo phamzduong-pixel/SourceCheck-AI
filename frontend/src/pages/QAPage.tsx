@@ -21,7 +21,7 @@ const SAMPLE_QUESTIONS = [
 ];
 
 export const QAPage: React.FC = () => {
-  const { t } = useAIPreferences();
+  const { t, showSources, showVerification } = useAIPreferences();
   const [question, setQuestion] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -186,13 +186,14 @@ export const QAPage: React.FC = () => {
             {/* Answer Text with Interactive Citations */}
             <AnswerRenderer
               answerText={result.answer}
-              citations={result.citations || []}
+              citations={showSources ? result.citations || [] : []}
               onCitationClick={handleCitationClick}
+              showCitations={showSources}
             />
           </div>
 
           {/* Evidence Coverage Card */}
-          {typeof result.evidence_coverage === 'number' && (
+          {showVerification && typeof result.evidence_coverage === 'number' && (
             <EvidenceCoverageCard
               coverage={result.evidence_coverage}
               status={result.status}
@@ -202,10 +203,10 @@ export const QAPage: React.FC = () => {
           )}
 
           {/* Claims Breakdown Section */}
-          {result.claims && result.claims.length > 0 && (
+          {showVerification && result.claims && result.claims.length > 0 && (
             <ClaimList
               claims={result.claims}
-              citations={result.citations || []}
+              citations={showSources ? result.citations || [] : []}
               onCitationClick={handleCitationClick}
             />
           )}
