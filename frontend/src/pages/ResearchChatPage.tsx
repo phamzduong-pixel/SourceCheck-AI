@@ -9,24 +9,19 @@ import { useParams, useNavigate } from 'react-router-dom';
 import conversationService from '../services/conversations';
 import { qaService } from '../services/qa';
 import { verificationService } from '../services/verification';
-import { FinalAnswerResponse, CitationItem } from '../types/qa';
+import { FinalAnswerResponse, CitationItem, QuestionRequest } from '../types/qa';
 import { VerificationResultResponse } from '../types/verification';
 import { ApiClientError } from '../services/apiClient';
 import { AnswerRenderer } from '../components/qa/AnswerRenderer';
 import { EvidenceCoverageCard } from '../components/qa/EvidenceCoverageCard';
 import { ClaimList } from '../components/qa/ClaimList';
 import { EvidenceDrawer } from '../components/qa/EvidenceDrawer';
+import { ResearchInputComposer, ResearchSubmitOptions } from '../components/chat/ResearchInputComposer';
 import { VerificationResultCard } from '../components/qa/VerificationResultCard';
 import { useAIPreferences } from '../hooks/useAIPreferences';
 import { AuthContext } from '../context/AuthContext';
 import '../styles/qa.css';
 import '../styles/chat.css';
-
-const SAMPLE_QUESTIONS = [
-  'Việt Nam chính thức gia nhập Tổ chức Thương mại Thế giới (WTO) vào năm nào?',
-  'Chính phủ Việt Nam đã ban hành chiến lược phát triển kinh tế số như thế nào?',
-  'Quy định pháp luật hiện hành về an toàn an ninh mạng tại Việt Nam gồm những nội dung gì?',
-];
 
 export interface ChatTurn {
   id: string;
@@ -61,6 +56,8 @@ export const ResearchChatPage: React.FC = () => {
   const flowEndRef = useRef<HTMLDivElement>(null);
   const isNearBottomRef = useRef<boolean>(true);
   const userJustSubmittedRef = useRef<boolean>(false);
+  const requestSequenceRef = useRef(0);
+  const pendingQuestionRef = useRef('');
 
   // Monitor viewport scroll position to prevent disruptive auto-scroll when user is reading higher up
   useEffect(() => {
@@ -142,6 +139,7 @@ export const ResearchChatPage: React.FC = () => {
   // Reset conversation to fresh welcome state
   const handleResetChat = () => {
     justCreatedConvIdRef.current = null;
+    requestSequenceRef.current += 1;
     setTurns([]);
     setQuestion('');
     setError(null);
@@ -219,14 +217,14 @@ export const ResearchChatPage: React.FC = () => {
         .catch((err: any) => {
           if (err instanceof ApiClientError) {
             if (err.statusCode === 404) {
-              setError('Cuộc trò chuyện không tồn tại hoặc bạn không có quyền truy cập.');
+              setError('Cu\u1ed9c tr\u00f2 chuy\u1ec7n kh\u00f4ng t\u1ed3n t\u1ea1i ho\u1eb7c b\u1ea1n kh\u00f4ng c\u00f3 quy\u1ec1n truy c\u1eadp.');
             } else if (err.statusCode === 401) {
-              setError('Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại để tiếp tục.');
+              setError('Phi\u00ean l\u00e0m vi\u1ec7c \u0111\u00e3 h\u1ebft h\u1ea1n. Vui l\u00f2ng \u0111\u0103ng nh\u1eadp l\u1ea1i \u0111\u1ec3 ti\u1ebfp t\u1ee5c.');
             } else {
-              setError(err.message || 'Không thể tải lịch sử cuộc trò chuyện.');
+              setError(err.message || '\u0110\u00e3 x\u1ea3y ra l\u1ed7i trong qu\u00e1 tr\u00ecnh x\u1eed l\u00fd c\u00e2u h\u1ecfi.');
             }
           } else {
-            setError(err?.message || 'Không thể tải lịch sử cuộc trò chuyện.');
+            setError(err?.message || '\u0110\u00e3 x\u1ea3y ra l\u1ed7i kh\u00f4ng x\u00e1c \u0111\u1ecbnh.');
           }
         })
         .finally(() => {
@@ -242,59 +240,72 @@ export const ResearchChatPage: React.FC = () => {
   }, [params.conversationId]);
 
   // Handle Question Submission
-  const handleAsk = async (queryText?: string) => {
+  const handleAsk = async (
+    queryText?: string,
+    options: ResearchSubmitOptions = { taskType: 'qa', documentIds: [], searchEnabled: true },
+  ) => {
     const textToSubmit = (queryText ?? question).trim();
     if (!textToSubmit || isLoading || isHistoryLoading) return;
 
+    const requestSequence = requestSequenceRef.current + 1;
+    requestSequenceRef.current = requestSequence;
+    pendingQuestionRef.current = textToSubmit;
     userJustSubmittedRef.current = true;
     setIsLoading(true);
     setError(null);
-    setQuestion(''); // Clear composer for follow‑up
+    setQuestion('');
 
     let targetConvId = activeConversationId;
 
-    // If starting from an empty session without a conversation_id, create one first
     if (!targetConvId) {
       try {
         const initialTitle =
-          textToSubmit.length > 48 ? `${textToSubmit.slice(0, 48)}...` : textToSubmit;
+          textToSubmit.length > 48 ? textToSubmit.slice(0, 48) + '...' : textToSubmit;
         const newConv = await conversationService.createConversation(initialTitle);
+        if (requestSequence !== requestSequenceRef.current) return;
         if (newConv?.id) {
           targetConvId = newConv.id;
           setActiveConversationId(targetConvId);
           justCreatedConvIdRef.current = targetConvId;
-          // Notify sidebar to refresh conversation list
           window.dispatchEvent(new CustomEvent('sourcecheck:refresh-conversations'));
-          // Update React Router route so params and NavLink active status synchronize
-          navigate(`/chat/${targetConvId}`, { replace: true });
+          navigate('/chat/' + targetConvId, { replace: true });
         }
       } catch (convErr: any) {
-        // Even if conversation creation fails, allow stateless question as fallback
         console.warn('Could not create conversation, proceeding with stateless request', convErr);
       }
     }
 
-    try {
-      const response = await qaService.askQuestion({
-        question: textToSubmit,
-        top_k: 5,
-        search_mode: 'hybrid',
-        conversation_id: targetConvId,
-      });
+    if (requestSequence !== requestSequenceRef.current) return;
 
-      // If the API had to create a conversational session, adopt its id so
-      // the route, history hydration, and Sidebar all point to the same conversation.
+    const request: QuestionRequest = {
+      question: textToSubmit,
+      top_k: 5,
+      search_mode: 'hybrid',
+      search_enabled: options.searchEnabled,
+      conversation_id: targetConvId,
+    };
+    if (options.taskType === 'summary') {
+      request.task_type = 'summary';
+      request.document_ids = options.documentIds;
+    } else if (options.documentIds.length > 0) {
+      request.document_ids = options.documentIds;
+    }
+
+    try {
+      const response = await qaService.askQuestion(request);
+      if (requestSequence !== requestSequenceRef.current) return;
+
       const responseConversationId = response.metadata?.conversation_id;
       if (!targetConvId && responseConversationId) {
         targetConvId = String(responseConversationId);
         setActiveConversationId(targetConvId);
         justCreatedConvIdRef.current = targetConvId;
-        navigate(`/chat/${targetConvId}`, { replace: true });
+        navigate('/chat/' + targetConvId, { replace: true });
         window.dispatchEvent(new CustomEvent('sourcecheck:refresh-conversations'));
       }
 
       const newTurn: ChatTurn = {
-        id: `turn-${Date.now()}`,
+        id: 'turn-' + Date.now(),
         question: textToSubmit,
         response,
         timestamp: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
@@ -302,8 +313,6 @@ export const ResearchChatPage: React.FC = () => {
 
       setTurns((prev) => [...prev, newTurn]);
 
-      // The ask response is the primary display payload. When it carries the
-      // persisted report ID, hydrate its canonical /verify representation too.
       const requestId = response.metadata?.request_id || response.metadata?.verification_result_id;
       if (typeof requestId === 'string' && requestId) {
         verificationService.getVerificationReport(requestId)
@@ -312,37 +321,43 @@ export const ResearchChatPage: React.FC = () => {
               turn.id === newTurn.id ? { ...turn, verificationReport } : turn
             )));
           })
-          // The answer response already contains usable verification data; a
-          // missing historical report must not make the chat answer fail.
           .catch(() => undefined);
       }
 
-      // Notify sidebar to update conversation list (e.g. order of updated_at)
       window.dispatchEvent(new CustomEvent('sourcecheck:refresh-conversations'));
     } catch (err: any) {
+      if (requestSequence !== requestSequenceRef.current) return;
       if (err instanceof ApiClientError) {
         if (err.statusCode === 401) {
-          setError('Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại để tiếp tục.');
+          setError('Phi\u00ean l\u00e0m vi\u1ec7c \u0111\u00e3 h\u1ebft h\u1ea1n. Vui l\u00f2ng \u0111\u0103ng nh\u1eadp l\u1ea1i \u0111\u1ec3 ti\u1ebfp t\u1ee5c.');
         } else if (err.statusCode === 404) {
-          setError('Cuộc trò chuyện không tồn tại hoặc bạn không có quyền truy cập.');
+          setError('Cu\u1ed9c tr\u00f2 chuy\u1ec7n kh\u00f4ng t\u1ed3n t\u1ea1i ho\u1eb7c b\u1ea1n kh\u00f4ng c\u00f3 quy\u1ec1n truy c\u1eadp.');
         } else if (err.statusCode === 422) {
-          setError(err.message || 'Dữ liệu câu hỏi không hợp lệ.');
+          setError(err.message || '\u0110\u00e3 x\u1ea3y ra l\u1ed7i trong qu\u00e1 tr\u00ecnh x\u1eed l\u00fd c\u00e2u h\u1ecfi.');
         } else if (err.statusCode >= 500) {
-          setError('Máy chủ đang gặp sự cố khi xử lý câu hỏi. Vui lòng thử lại sau.');
+          setError('M\u00e1y ch\u1ee7 \u0111ang g\u1eb7p s\u1ef1 c\u1ed1 khi x\u1eed l\u00fd c\u00e2u h\u1ecfi. Vui l\u00f2ng th\u1eed l\u1ea1i sau.');
         } else if (err.statusCode === 0) {
-          setError('Không thể kết nối đến máy chủ. Vui lòng kiểm tra lại mạng.');
+          setError('Kh\u00f4ng th\u1ec3 k\u1ebft n\u1ed1i \u0111\u1ebfn m\u00e1y ch\u1ee7. Vui l\u00f2ng ki\u1ec3m tra l\u1ea1i m\u1ea1ng.');
         } else {
-          setError(err.message || 'Đã xảy ra lỗi trong quá trình xử lý câu hỏi.');
+          setError(err.message || '\u0110\u00e3 x\u1ea3y ra l\u1ed7i trong qu\u00e1 tr\u00ecnh x\u1eed l\u00fd c\u00e2u h\u1ecfi.');
         }
       } else {
-        setError(err?.message || 'Đã xảy ra lỗi không xác định.');
+        setError(err?.message || '\u0110\u00e3 x\u1ea3y ra l\u1ed7i kh\u00f4ng x\u00e1c \u0111\u1ecbnh.');
       }
       setQuestion(textToSubmit);
     } finally {
-      setIsLoading(false);
+      if (requestSequence === requestSequenceRef.current) {
+        setIsLoading(false);
+      }
     }
   };
 
+  const handleStop = () => {
+    if (!isLoading) return;
+    requestSequenceRef.current += 1;
+    setQuestion(pendingQuestionRef.current);
+    setIsLoading(false);
+  };
   // Smart Auto-Follow: only scroll to bottom if user just submitted or was already near bottom
   useEffect(() => {
     if (turns.length === 0) return;
@@ -359,22 +374,6 @@ export const ResearchChatPage: React.FC = () => {
 
 
 
-
-  // Keyboard shortcut handler: Enter to submit, Shift+Enter for newline
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter') {
-      if (e.shiftKey) {
-        // Allow newline
-        return;
-      }
-      // Submit query
-      e.preventDefault();
-      handleAsk();
-    } else if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-      e.preventDefault();
-      handleAsk();
-    }
-  };
 
   // Open Evidence Drawer when citation clicked
   const handleCitationClick = (citation: CitationItem, turnId?: string) => {
@@ -432,67 +431,17 @@ export const ResearchChatPage: React.FC = () => {
             {t('chat.welcomeSubtitle')}
           </p>
 
-          {/* Centered Composer in Welcome State */}
+          {/* Centered Research Composer */}
           <div className="chat-welcome-composer-wrapper">
-            <div className="question-composer-card" data-testid="question-composer">
-              <textarea
-                ref={inputRef}
-                className="question-textarea"
-                placeholder={t('chat.composerPlaceholder')}
-                value={question}
-                onChange={(e) => setQuestion(e.target.value)}
-                onKeyDown={handleKeyDown}
-                disabled={isLoading}
-                rows={2}
-                aria-label="Ask Question"
-                data-testid="question-textarea"
-              />
-
-              <div className="composer-controls">
-                <span className="composer-hint">
-                  <kbd>Enter</kbd> để gửi • <kbd>Shift + Enter</kbd> xuống dòng
-                </span>
-
-                <button
-                  type="button"
-                  className="btn-ask"
-                  onClick={() => handleAsk()}
-                  disabled={!question.trim() || isLoading}
-                  aria-label="Ask Question"
-                  data-testid="btn-ask"
-                >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="22" y1="2" x2="11" y2="13" />
-                    <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                  </svg>
-                  <span>{t('chat.sendBtn')}</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Research Prompt Starters */}
-          <div style={{ width: '100%' }}>
-            <div style={{ fontSize: '0.85rem', color: 'var(--color-text-muted)', marginBottom: '0.65rem', textAlign: 'left', fontWeight: 500 }}>
-              {t('chat.startersTitle')}
-            </div>
-            <div className="chat-starters-grid sample-questions-list">
-              {SAMPLE_QUESTIONS.map((sampleQ, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  className="chat-starter-card sample-question-btn"
-                  onClick={() => {
-                    setQuestion(sampleQ);
-                    handleAsk(sampleQ);
-                  }}
-                  data-testid={`sample-question-${idx}`}
-                >
-                  <span>{sampleQ}</span>
-                  <span className="chat-starter-arrow" aria-hidden="true">&rarr;</span>
-                </button>
-              ))}
-            </div>
+            <ResearchInputComposer
+              value={question}
+              onChange={setQuestion}
+              onSubmit={(options) => handleAsk(undefined, options)}
+              onStop={handleStop}
+              isLoading={isLoading}
+              disabled={isHistoryLoading}
+              variant="welcome"
+            />
           </div>
         </div>
       )}
@@ -609,8 +558,12 @@ export const ResearchChatPage: React.FC = () => {
 
       {/* Loading Indicator State */}
       {isLoading && (
-        <div className="qa-loading-card" data-testid="qa-loading-state" style={{ margin: '1rem 0' }}>
-          <div className="spinner" style={{ width: '36px', height: '36px', borderWidth: '3px', borderTopColor: 'var(--color-text-primary)' }} />
+        <div className="qa-loading-card research-chat-loading" data-testid="qa-loading-state" role="status" aria-live="polite">
+          <div className="research-loading-dots" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+          </div>
           <p className="qa-loading-text">{t('qa.loadingTitle')}</p>
         </div>
       )}
@@ -620,51 +573,17 @@ export const ResearchChatPage: React.FC = () => {
       {/* Sticky Bottom Docked Composer (Visible when conversation is active) */}
       {hasTurns && (
         <div className="chat-sticky-composer" data-testid="question-composer">
-          <textarea
-            ref={inputRef}
-            className="chat-sticky-textarea question-textarea"
-            placeholder={t('chat.followUpPlaceholder')}
+          <ResearchInputComposer
             value={question}
-            onChange={(e) => setQuestion(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={isLoading}
-            rows={1}
-            aria-label="Ask Question"
-            data-testid="question-textarea"
+            onChange={setQuestion}
+            onSubmit={(options) => handleAsk(undefined, options)}
+            onStop={handleStop}
+            isLoading={isLoading}
+            disabled={isHistoryLoading}
+            variant="sticky"
           />
-
-          <div className="chat-sticky-controls composer-controls">
-            <span className="chat-sticky-hint composer-hint">
-              <kbd>Enter</kbd> gửi • <kbd>Shift + Enter</kbd> xuống dòng
-            </span>
-
-            <button
-              type="button"
-              className="btn-ask"
-              onClick={() => handleAsk()}
-              disabled={!question.trim() || isLoading}
-              aria-label="Ask Question"
-              data-testid="btn-ask"
-            >
-              {isLoading ? (
-                <>
-                  <span className="spinner" style={{ width: '16px', height: '16px', borderWidth: '2px' }} />
-                  <span>{t('chat.sendingBtn')}</span>
-                </>
-              ) : (
-                <>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="22" y1="2" x2="11" y2="13" />
-                    <polygon points="22 2 15 22 11 13 2 9 22 2" />
-                  </svg>
-                  <span>{t('chat.sendBtn')}</span>
-                </>
-              )}
-            </button>
-          </div>
         </div>
       )}
-
       {/* Evidence Drawer */}
       <EvidenceDrawer
         isOpen={isDrawerOpen}

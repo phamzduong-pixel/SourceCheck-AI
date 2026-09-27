@@ -16,12 +16,18 @@ export type FinalAnswerStatus =
   | string;
 
 export type CitationStance = 'SUPPORTS' | 'REFUTES' | 'CONTEXT' | string;
+export type QATaskType = 'qa' | 'summary';
 
 export interface QuestionRequest {
   question: string;
+  task_type?: QATaskType;
   top_k?: number;
   search_mode?: 'hybrid' | 'vector' | 'bm25' | string;
+  /** Whether the composer Search control is enabled. */
+  search_enabled?: boolean;
   conversation_id?: string | null;
+  /** Optional document scope. Omit to preserve global/backward-compatible Q&A. */
+  document_ids?: string[];
 }
 
 export interface ClaimItem {
@@ -70,8 +76,31 @@ export interface CitationItem {
   metadata?: Record<string, any>;
 }
 
+export interface SummaryBatchProvenance {
+  batch_index: number;
+  evidence_ids: string[];
+  chunk_ids: string[];
+  document_ids: string[];
+  page_numbers: Array<number | null>;
+  processed: boolean;
+  processed_chunk_count: number;
+  status: string;
+}
+
+export interface AnswerMetadata extends Record<string, any> {
+  task_type?: QATaskType;
+  document_chunks_total?: number;
+  document_chunks_processed?: number;
+  document_coverage?: number;
+  summary_claim_coverage?: number;
+  summary_batch_count?: number;
+  summary_successful_batch_count?: number;
+  summary_batch_provenance?: SummaryBatchProvenance[];
+}
+
 export interface FinalAnswerResponse {
   question: string;
+  task_type?: QATaskType;
   answer: string;
   status: FinalAnswerStatus;
   claims: ClaimItem[];
@@ -79,5 +108,5 @@ export interface FinalAnswerResponse {
   citations: CitationItem[];
   evidence_coverage: number;
   verification_summary: Record<string, number>;
-  metadata: Record<string, any>;
+  metadata: AnswerMetadata;
 }

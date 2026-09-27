@@ -2,7 +2,8 @@
 
 import logging
 import uuid
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.citation import Citation as DBCitation
@@ -40,10 +41,13 @@ class QAService:
         question: str,
         top_k: int = 5,
         search_mode: str = "hybrid",
+        search_enabled: bool = True,
         session: Optional[AsyncSession] = None,
         persist_db: bool = True,
         metadata: Optional[Dict[str, Any]] = None,
         conversation_history: Optional[str] = None,
+        document_ids: Optional[List[UUID]] = None,
+        task_type: str = "qa",
     ) -> FinalAnswerResponse:
         """Execute the end-to-end Q&A pipeline safely and optionally persist records."""
         try:
@@ -52,9 +56,12 @@ class QAService:
                 question=question,
                 top_k=top_k,
                 search_mode=search_mode,
+                search_enabled=search_enabled,
                 session=session,
                 metadata=metadata,
                 conversation_history=conversation_history,
+                document_ids=document_ids,
+                task_type=task_type,
             )
 
             # 2. Persist to relational DB for traceability if session is provided and response is not blocked

@@ -768,3 +768,72 @@ Database SQLite fallback được khởi tạo trước khi các trường profi
 - Local demo login sau compatibility check: HTTP `200`.
 
 Chi tiết user flow và giới hạn sản phẩm được ghi tại [Current Completion Status](current-status.md).
+---
+
+## 10. Research ChatInput và Document-Scoped Request Contract (Checkpoint F1)
+
+Phần nhập liệu nghiên cứu hiện tại là lớp frontend điều phối request, không phải một retrieval engine riêng. Component chính là `frontend/src/components/chat/ResearchInputComposer.tsx`, được dùng bởi `ResearchChatPage` cho cả empty state và conversation mode.
+
+### 10.1. Request flow
+
+```text
+ChatInput
+  ├─ attachment upload → document_id
+  ├─ task_type: qa | summary
+  ├─ document_ids: selected ready documents
+  ├─ search_enabled
+  └─ question
+       ↓
+ResearchChatPage
+       ↓
+POST /api/v1/questions/ask
+       ↓
+QuestionRequest → QAService → QAPipeline
+```
+
+`task_type=qa` là mặc định để bảo toàn backward compatibility. `task_type=summary` yêu cầu đúng một `document_id`; Summary không đi qua top-k semantic/BM25 retrieval mà dùng document-wide summary flow đã triển khai ở E1-E3.
+
+### 10.2. Attachment scope
+
+- Chỉ nhận PDF, DOCX và TXT ở ChatInput.
+- Upload dùng API tài liệu hiện có và lấy `document_id` từ response.
+- Chỉ attachment ở trạng thái `ready` mới được đưa vào `document_ids`.
+- Q&A có thể gửi nhiều document; Summary chỉ được gửi một document.
+- Backend validate scope trước khi pipeline chạy.
+- Retrieval, context builder, evidence matcher, claim verifier, citation service và output guardrail tiếp tục dùng cùng document scope.
+
+### 10.3. Search control
+
+Search control không mở rộng ra web search hoặc URL ingestion. Nó điều khiển hành vi trong retrieval pipeline hiện có:
+
+- Search bật: giữ `search_mode=hybrid`, dùng Vector Search + BM25 + RRF + reranking.
+- Search tắt: vẫn giữ grounded retrieval với câu hỏi gốc để không phá Q&A backward compatibility, nhưng bỏ contextual query rewrite.
+- `search_enabled` mặc định là `true` ở backend schema.
+- Khi có `document_ids`, cả hai nhánh Vector/BM25 vẫn bị filter theo scope trước khi context và verification.
+
+Vì vậy Search không bypass các bước generation, claim extraction, verification, citation hoặc output guardrail.
+
+### 10.4. Voice và interaction guardrails
+
+- Web Speech API ưu tiên `vi-VN`; transcript chỉ cập nhật textarea.
+- Không tự động submit transcript.
+- Enter submit; Shift+Enter newline.
+- Khi request chạy, Send chuyển thành Stop; attachment và voice controls bị disable khi không phù hợp.
+- Browser không hỗ trợ Speech Recognition thì hiển thị fallback rõ ràng.
+
+### 10.5. Layout states
+
+- Empty State căn giữa theo vùng `.app-content`, dùng chiều cao thực tế đã trừ padding của content để tránh scrollbar dư.
+- Khi có message, workspace chuyển về conversation flow; sticky composer căn theo answer column sau avatar AI.
+- Toolbar là flex row độc lập, icon không wrap/overlap; mic luôn nằm cạnh Send.
+- Light/Dark mode và responsive desktop/mobile được giữ nguyên.
+
+### 10.6. Validation reference
+
+- Focused frontend ChatInput/scope/Summary tests: pass.
+- Full frontend regression: 17 test files, 198 tests pass.
+- Backend retrieval/document-scope/verification/summary regression: 28 tests pass.
+- Production build: pass.
+- `git diff --check`: pass.
+
+Phạm vi F1 không bao gồm web search, OCR, image analysis, URL ingestion, TTS, ownership/workspace hoặc thay đổi kiến trúc verification/citation.

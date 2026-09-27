@@ -206,11 +206,7 @@ describe('Main Research Chat Feature (FE-CHAT-01)', () => {
       expect(textarea).toBeInTheDocument();
       expect(screen.getByTestId('btn-ask')).toBeDisabled();
 
-      // Research Starters / Sample Questions
-      expect(screen.getByText('Gợi ý chủ đề tra cứu:')).toBeInTheDocument();
-      expect(screen.getByTestId('sample-question-0')).toBeInTheDocument();
-      expect(screen.getByTestId('sample-question-1')).toBeInTheDocument();
-      expect(screen.getByTestId('sample-question-2')).toBeInTheDocument();
+      expect(screen.queryByTestId('sample-question-0')).not.toBeInTheDocument();
     });
 
     it('enables send button when input has text and disables when whitespace only', () => {
@@ -228,29 +224,6 @@ describe('Main Research Chat Feature (FE-CHAT-01)', () => {
       expect(sendBtn).not.toBeDisabled();
     });
 
-    it('clicking a starter prompt immediately fills query and dispatches research API', async () => {
-      const askSpy = vi.spyOn(qaService, 'askQuestion').mockResolvedValueOnce(mockFinalAnswer);
-      renderResearchChat();
-
-      const starterBtn = screen.getByTestId('sample-question-0');
-      fireEvent.click(starterBtn);
-
-      await waitFor(() => {
-        expect(askSpy).toHaveBeenCalledTimes(1);
-      });
-      expect(askSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          question: expect.stringContaining('WTO'),
-          top_k: 5,
-          search_mode: 'hybrid',
-          conversation_id: 'conv-test-123',
-        })
-      );
-
-      await waitFor(() => {
-        expect(screen.getByTestId('chat-conversation-flow')).toBeInTheDocument();
-      });
-    });
   });
 
   describe('2. Query Submission & Loading State', () => {
@@ -478,7 +451,6 @@ describe('Main Research Chat Feature (FE-CHAT-01)', () => {
 
       // UI is English
       expect(screen.getByText('What would you like to research or verify today?')).toBeInTheDocument();
-      expect(screen.getByText('Suggested research topics:')).toBeInTheDocument();
     });
   });
 

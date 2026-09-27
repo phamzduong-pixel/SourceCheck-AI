@@ -2,7 +2,8 @@
 
 import logging
 import uuid
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
+from uuid import UUID
 from app.schemas.verification import EvidenceItem as LegacyEvidenceItem
 from app.services.citation.citation_formatter import CitationFormatter
 from app.services.citation.citation_grounder import CitationGrounder
@@ -35,6 +36,7 @@ class CitationService:
         self,
         verification_results: List[ClaimVerificationResult],
         candidates_map: Dict[str, List[MatchedEvidenceCandidate]],
+        document_ids: Optional[List[UUID]] = None,
     ) -> CitationSummary:
         """Construct structured citations for verification results.
         
@@ -46,6 +48,9 @@ class CitationService:
             CitationSummary containing structured citations, unique evidence count, and formatted references.
         """
         citations: List[CitationItem] = []
+        allowed_document_ids: Optional[Set[str]] = (
+            None if document_ids is None else {str(document_id) for document_id in document_ids}
+        )
 
         # Mapping to guarantee stable, sequential 1-indexed footnote numbers across distinct evidences
         evidence_footnote_map: Dict[str, int] = {}
@@ -53,6 +58,13 @@ class CitationService:
 
         for res in verification_results:
             candidates = candidates_map.get(res.claim_id, [])
+            if allowed_document_ids is not None:
+                candidates = [
+                    candidate
+                    for candidate in candidates
+                    if candidate.document_id is not None
+                    and candidate.document_id in allowed_document_ids
+                ]
             candidates_by_eid = {c.evidence_id: c for c in candidates}
 
             # Gather cited evidence IDs based on verdict
@@ -89,6 +101,18 @@ class CitationService:
 
                 source_name = cand.source_title or "Tài liệu kiểm chứng"
 
+                citation_metadata = {
+                    "page_number": cand.page_number,
+                    "publisher": cand.publisher,
+                }
+                if cand.metadata and "summary_batch_index" in cand.metadata:
+                    citation_metadata.update(
+                        {
+                            "summary_batch_index": cand.metadata["summary_batch_index"],
+                            "summary_batch_processed": cand.metadata.get("summary_batch_processed"),
+                        }
+                    )
+
                 citations.append(
                     CitationItem(
                         citation_id=f"cite_{uuid.uuid4().hex[:8]}",
@@ -103,10 +127,7 @@ class CitationService:
                         stance=stance,
                         footnote_index=f_idx,
                         relevance_score=cand.relevance_score,
-                        metadata={
-                            "page_number": cand.page_number,
-                            "publisher": cand.publisher,
-                        },
+                        metadata=citation_metadata,
                     )
                 )
 

@@ -2,6 +2,7 @@
 
 import logging
 from typing import List, Optional, Set
+from uuid import UUID
 
 from app.services.generation.schemas import (
     FinalAnswerResponse,
@@ -40,12 +41,14 @@ class GuardrailService:
         response: FinalAnswerResponse,
         valid_evidence_ids: Optional[Set[str]] = None,
         verification_results: Optional[List[ClaimVerificationResult]] = None,
+        document_ids: Optional[List[UUID]] = None,
     ) -> OutputValidationResult:
         """Audit the final assembled response before returning to user or client."""
         return self.output_guardrail.validate_response(
             response=response,
             valid_evidence_ids=valid_evidence_ids,
             verification_results=verification_results,
+            document_ids=document_ids,
         )
 
     def apply_final_guardrail(
@@ -53,6 +56,7 @@ class GuardrailService:
         response: FinalAnswerResponse,
         valid_evidence_ids: Optional[Set[str]] = None,
         verification_results: Optional[List[ClaimVerificationResult]] = None,
+        document_ids: Optional[List[UUID]] = None,
     ) -> FinalAnswerResponse:
         """Validate output and return clean response or a sanitized BLOCKED response if violations are detected.
         
@@ -62,6 +66,7 @@ class GuardrailService:
             response=response,
             valid_evidence_ids=valid_evidence_ids,
             verification_results=verification_results,
+            document_ids=document_ids,
         )
 
         if not audit_result.is_valid:

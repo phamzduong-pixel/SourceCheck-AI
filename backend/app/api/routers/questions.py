@@ -7,8 +7,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.dependencies import get_db, get_qa_service, get_current_active_user
 from app.models.user import User
 from app.repositories.conversation_repository import ConversationRepository
+from app.repositories.document_repository import DocumentRepository
 from app.schemas.common import APIResponse
-from app.schemas.qa import QuestionRequest
+from app.schemas.qa import QuestionRequest, TaskType
 from app.services.generation.schemas import FinalAnswerResponse
 from app.services.qa.qa_service import QAService
 
@@ -34,6 +35,32 @@ async def ask_question(
 
     conversation = None
     history_text = None
+
+    if request.task_type == TaskType.SUMMARY and (
+        not request.document_ids or len(request.document_ids) != 1
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Summary requires exactly one document_id.",
+        )
+
+    # Validate the requested scope before retrieval. Ownership is intentionally
+    # outside Checkpoint A; this only prevents references to missing documents.
+    if request.document_ids:
+        document_repo = DocumentRepository(db)
+        missing_document_ids = [
+            document_id
+            for document_id in request.document_ids
+            if await document_repo.get_by_id(document_id) is None
+        ]
+        if missing_document_ids:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "message": "Một hoặc nhiều document_ids không tồn tại.",
+                    "document_ids": [str(document_id) for document_id in missing_document_ids],
+                },
+            )
 
     # 1. Ownership and context resolution if conversation_id is provided
     if request.conversation_id is not None:
@@ -64,9 +91,12 @@ async def ask_question(
             question=request.question,
             top_k=request.top_k,
             search_mode=request.search_mode,
+            search_enabled=request.search_enabled,
+            document_ids=request.document_ids,
             session=db,
             metadata={"_user_id": str(current_user.id)},
             conversation_history=history_text,
+            task_type=request.task_type,
         )
 
         # 3. Ensure a conversation exists for durable persistence

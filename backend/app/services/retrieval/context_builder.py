@@ -1,7 +1,8 @@
 """Context builder assembling selected evidence into structured context for LLMs."""
 
 import logging
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Set
+from uuid import UUID
 from app.schemas.search import SearchHit
 from app.services.retrieval.schemas import (
     EvidenceItem,
@@ -40,6 +41,7 @@ class ContextBuilder:
         query: str,
         evidence_hits: List[SearchHit],
         max_tokens: Optional[int] = None,
+        document_ids: Optional[List[UUID]] = None,
     ) -> StructuredContext:
         """Build a StructuredContext object with stable identifiers and mapping.
         
@@ -62,6 +64,18 @@ class ContextBuilder:
                 evidence_map={},
                 token_count_estimate=estimate_token_count("No relevant evidence found."),
             )
+
+        if document_ids is not None:
+            allowed_document_ids: Set[str] = {str(document_id) for document_id in document_ids}
+            out_of_scope_hits = [
+                hit for hit in evidence_hits if hit.document_id not in allowed_document_ids
+            ]
+            if out_of_scope_hits:
+                out_of_scope_ids = sorted({hit.document_id for hit in out_of_scope_hits})
+                raise ValueError(
+                    "Evidence contains document(s) outside the requested scope: "
+                    f"{out_of_scope_ids}"
+                )
 
         evidence_items: List[EvidenceItem] = []
         evidence_map: Dict[str, EvidenceItem] = {}

@@ -3,9 +3,11 @@
  * Handles question composing, API dispatch, provenance rendering, and evidence inspection.
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { qaService } from '../services/qa';
-import { FinalAnswerResponse, CitationItem } from '../types/qa';
+import { FinalAnswerResponse, CitationItem, QuestionRequest, QATaskType } from '../types/qa';
+import { documentService } from '../services/documents';
+import { DocumentResponse } from '../types/document';
 import { ApiClientError } from '../services/apiClient';
 import { AnswerRenderer } from '../components/qa/AnswerRenderer';
 import { EvidenceCoverageCard } from '../components/qa/EvidenceCoverageCard';
@@ -26,24 +28,91 @@ export const QAPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<FinalAnswerResponse | null>(null);
+  const [documents, setDocuments] = useState<DocumentResponse[]>([]);
+  const [selectedDocumentIds, setSelectedDocumentIds] = useState<string[]>([]);
+  const [taskType, setTaskType] = useState<QATaskType>('qa');
+  const [submittedDocumentIds, setSubmittedDocumentIds] = useState<string[]>([]);
+  const [submittedTaskType, setSubmittedTaskType] = useState<QATaskType>('qa');
+  const [isDocumentsLoading, setIsDocumentsLoading] = useState<boolean>(true);
+  const [documentLoadError, setDocumentLoadError] = useState<string | null>(null);
 
   // Evidence Drawer State
   const [activeCitation, setActiveCitation] = useState<CitationItem | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(false);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadDocuments = async () => {
+      try {
+        const response = await documentService.listDocuments({ page: 1, page_size: 100 });
+        if (isMounted) {
+          setDocuments(response.items);
+          setDocumentLoadError(null);
+        }
+      } catch (err: any) {
+        // Document loading must not disable the existing unscoped Q&A flow.
+        if (isMounted) {
+          setDocumentLoadError(err?.message || 'Unable to load available documents.');
+        }
+      } finally {
+        if (isMounted) setIsDocumentsLoading(false);
+      }
+    };
+
+    loadDocuments();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const toggleDocument = (documentId: string) => {
+    setSelectedDocumentIds((currentIds) => {
+      if (taskType === 'summary') {
+        return currentIds[0] === documentId ? [] : [documentId];
+      }
+      return currentIds.includes(documentId)
+        ? currentIds.filter((id) => id !== documentId)
+        : [...currentIds, documentId];
+    });
+  };
+
+  const handleTaskTypeChange = (nextTaskType: QATaskType) => {
+    setTaskType(nextTaskType);
+    if (nextTaskType === 'summary') {
+      setSelectedDocumentIds((currentIds) => currentIds.slice(0, 1));
+    }
+  };
+
   const handleAsk = async (queryText?: string) => {
     const textToSubmit = (queryText ?? question).trim();
     if (!textToSubmit || isLoading) return;
 
+    const scopeForRequest = [...selectedDocumentIds];
+    if (taskType === 'summary' && scopeForRequest.length !== 1) {
+      setError('Chọn đúng một tài liệu trước khi tạo tóm tắt.');
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
+    setSubmittedDocumentIds(scopeForRequest);
+    setSubmittedTaskType(taskType);
+
+    const request: QuestionRequest = {
+      question: textToSubmit,
+      top_k: 5,
+      search_mode: 'hybrid',
+    };
+    if (taskType === 'summary') {
+      request.task_type = 'summary';
+      request.document_ids = scopeForRequest;
+    } else if (scopeForRequest.length > 0) {
+      request.document_ids = scopeForRequest;
+    }
 
     try {
-      const response = await qaService.askQuestion({
-        question: textToSubmit,
-        top_k: 5,
-        search_mode: 'hybrid',
-      });
+      const response = await qaService.askQuestion(request);
       setResult(response);
     } catch (err: any) {
       if (err instanceof ApiClientError) {
@@ -82,6 +151,19 @@ export const QAPage: React.FC = () => {
   const activeEvidence = result?.evidence?.find(
     (ev) => ev.evidence_id === activeCitation?.evidence_id
   );
+  const isSummaryResult =
+    submittedTaskType === 'summary' || result?.metadata?.task_type === 'summary';
+  const summaryDocument = documents.find(
+    (document) => document.id === submittedDocumentIds[0]
+  );
+  const documentChunksTotal = result?.metadata?.document_chunks_total;
+  const documentChunksProcessed = result?.metadata?.document_chunks_processed;
+  const documentCoverage = result?.metadata?.document_coverage;
+  const summaryClaimCoverage = result?.metadata?.summary_claim_coverage;
+  const hasPartialDocumentProcessing =
+    isSummaryResult &&
+    typeof documentCoverage === 'number' &&
+    documentCoverage < 1;
 
   return (
     <div className="qa-container" data-testid="qa-page">
@@ -93,6 +175,106 @@ export const QAPage: React.FC = () => {
 
       {/* Question Composer Card */}
       <div className="question-composer-card" data-testid="question-composer">
+                <fieldset
+          data-testid="qa-operation-selector"
+          style={{
+            margin: '0 0 1rem',
+            padding: '0.85rem',
+            border: '1px solid var(--color-border, #e5e7eb)',
+            borderRadius: '0.75rem',
+          }}
+        >
+          <legend style={{ padding: '0 0.25rem', fontWeight: 600 }}>Operation</legend>
+          <label style={{ marginRight: '1rem', cursor: 'pointer' }}>
+            <input
+              type="radio"
+              name="qa-task-type"
+              value="qa"
+              checked={taskType === 'qa'}
+              onChange={() => handleTaskTypeChange('qa')}
+              disabled={isLoading}
+              data-testid="operation-qa"
+            />
+            {' '}Q&amp;A
+          </label>
+          <label style={{ cursor: 'pointer' }}>
+            <input
+              type="radio"
+              name="qa-task-type"
+              value="summary"
+              checked={taskType === 'summary'}
+              onChange={() => handleTaskTypeChange('summary')}
+              disabled={isLoading}
+              data-testid="operation-summary"
+            />
+            {' '}Summary
+          </label>
+          {taskType === 'summary' && (
+            <p data-testid="summary-operation-hint" style={{ margin: '0.6rem 0 0', color: 'var(--color-text-muted)' }}>
+              Summary uses every available chunk from one selected document and verifies its claims with citations.
+            </p>
+          )}
+        </fieldset>
+
+        <div
+          data-testid="document-scope-selector"
+          style={{
+            marginBottom: '1rem',
+            padding: '0.85rem',
+            border: '1px solid var(--color-border, #e5e7eb)',
+            borderRadius: '0.75rem',
+            background: 'var(--color-surface-muted, #f8fafc)',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: '0.75rem', marginBottom: '0.6rem' }}>
+            <strong>{taskType === 'summary' ? 'Document to summarize' : 'Documents for this question'}</strong>
+            <span data-testid="selected-document-count" style={{ color: 'var(--color-text-muted)' }}>
+              {selectedDocumentIds.length > 0
+                ? selectedDocumentIds.length + ' selected'
+                : taskType === 'summary' ? 'Select one document' : 'No document scope'}
+            </span>
+          </div>
+
+          {isDocumentsLoading ? (
+            <span data-testid="documents-loading">Loading available documents...</span>
+          ) : documents.length > 0 ? (
+            <div role="group" aria-label={taskType === 'summary' ? 'Select one document for summary' : 'Select documents for Q&A'}>
+              {documents.map((document) => (
+                <label
+                  key={document.id}
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.45rem', cursor: 'pointer' }}
+                >
+                  <input
+                    type={taskType === 'summary' ? 'radio' : 'checkbox'}
+                    name={taskType === 'summary' ? 'summary-document' : undefined}
+                    checked={selectedDocumentIds.includes(document.id)}
+                    onChange={() => toggleDocument(document.id)}
+                    disabled={isLoading}
+                    data-testid={'document-checkbox-' + document.id}
+                  />
+                  <span>{document.title}</span>
+                </label>
+              ))}
+            </div>
+          ) : (
+            <span data-testid="documents-empty">No uploaded documents available.</span>
+          )}
+
+          {documentLoadError && (
+            <p data-testid="documents-load-error" style={{ margin: '0.5rem 0 0', color: 'var(--color-text-muted)' }}>
+              {documentLoadError}
+            </p>
+          )}
+
+          {selectedDocumentIds.length > 0 && (
+            <p data-testid="active-document-scope" style={{ margin: '0.65rem 0 0', color: 'var(--color-primary)' }}>
+              {taskType === 'summary' ? 'Summarizing: ' : 'Using: '}{documents
+                .filter((document) => selectedDocumentIds.includes(document.id))
+                .map((document) => document.title)
+                .join(', ')}
+            </p>
+          )}
+        </div>
         <textarea
           className="question-textarea"
           placeholder={t('qa.composerPlaceholder')}
@@ -114,8 +296,8 @@ export const QAPage: React.FC = () => {
             type="button"
             className="btn-ask"
             onClick={() => handleAsk()}
-            disabled={!question.trim() || isLoading}
-            aria-label="Ask Question"
+            disabled={!question.trim() || isLoading || (taskType === 'summary' && selectedDocumentIds.length !== 1)}
+            aria-label={taskType === 'summary' ? 'Summarize Document' : 'Ask Question'}
             data-testid="btn-ask"
           >
             {isLoading ? (
@@ -129,7 +311,7 @@ export const QAPage: React.FC = () => {
                   <line x1="22" y1="2" x2="11" y2="13" />
                   <polygon points="22 2 15 22 11 13 2 9 22 2" />
                 </svg>
-                <span>{t('qa.composerAskBtn')}</span>
+                <span>{taskType === 'summary' ? 'Summarize document' : t('qa.composerAskBtn')}</span>
               </>
             )}
           </button>
@@ -164,6 +346,56 @@ export const QAPage: React.FC = () => {
       {/* Answer Result Section */}
       {result && !isLoading && (
         <div className="qa-answer-container" data-testid="qa-answer-container">
+          {submittedDocumentIds.length > 0 && (
+            <div data-testid="submitted-document-scope" style={{ marginBottom: '0.75rem', color: 'var(--color-text-muted)' }}>
+              {isSummaryResult ? 'Summary document: ' : 'Answer scoped to: '}{documents
+                .filter((document) => submittedDocumentIds.includes(document.id))
+                .map((document) => document.title)
+                .join(', ')}
+            </div>
+          )}
+
+          {isSummaryResult && (
+            <div
+              data-testid="summary-grounding-metadata"
+              style={{
+                marginBottom: '0.75rem',
+                padding: '0.85rem',
+                border: '1px solid var(--color-border, #e5e7eb)',
+                borderRadius: '0.75rem',
+                background: 'var(--color-surface-muted, #f8fafc)',
+              }}
+            >
+              <strong data-testid="summary-document-title">
+                Summarizing: {summaryDocument?.title || submittedDocumentIds[0] || 'Selected document'}
+              </strong>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.8rem', marginTop: '0.55rem', color: 'var(--color-text-muted)' }}>
+                {typeof documentChunksProcessed === 'number' && typeof documentChunksTotal === 'number' && (
+                  <span data-testid="summary-chunks-processed">
+                    Chunks processed: {documentChunksProcessed}/{documentChunksTotal}
+                  </span>
+                )}
+                {typeof documentCoverage === 'number' && (
+                  <span data-testid="summary-document-coverage">
+                    Document coverage: {Math.round(documentCoverage * 100)}%
+                  </span>
+                )}
+                {typeof summaryClaimCoverage === 'number' && (
+                  <span data-testid="summary-claim-coverage">
+                    Claim coverage: {Math.round(summaryClaimCoverage * 100)}%
+                  </span>
+                )}
+              </div>
+              <p data-testid="summary-grounding-status" style={{ margin: '0.55rem 0 0' }}>
+                {result.status === 'INSUFFICIENT_EVIDENCE'
+                  ? 'Insufficient evidence: this summary could not be fully grounded in the selected document.'
+                  : hasPartialDocumentProcessing
+                    ? 'Partial summary: one or more document batches were not processed successfully.'
+                    : 'Grounded summary: claims and citations were verified against the selected document.'}
+              </p>
+            </div>
+          )}
+
           {/* Main Answer Card */}
           <div className="qa-answer-card">
             <div className="answer-card-header">
@@ -172,7 +404,7 @@ export const QAPage: React.FC = () => {
                   <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
                   <path d="m9 12 2 2 4-4" />
                 </svg>
-                <span>{t('qa.answerTitle')}</span>
+                <span>{isSummaryResult ? 'Document Summary' : t('qa.answerTitle')}</span>
               </h2>
 
               <span

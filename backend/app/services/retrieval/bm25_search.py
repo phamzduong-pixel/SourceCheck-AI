@@ -87,12 +87,12 @@ class BM25Retriever(BaseBM25Retriever):
             .outerjoin(Source, Document.source_id == Source.id)
         )
 
-        if filters and "document_id" in filters:
+        if filters and "document_ids" in filters:
             try:
-                doc_id = UUID(str(filters["document_id"]))
-                stmt = stmt.where(DocumentChunk.document_id == doc_id)
-            except (ValueError, TypeError):
-                pass
+                document_ids = [UUID(str(document_id)) for document_id in filters["document_ids"]]
+                stmt = stmt.where(DocumentChunk.document_id.in_(document_ids))
+            except (ValueError, TypeError) as exc:
+                raise ValidationException("document_ids must contain valid UUID values") from exc
 
         res = await session.execute(stmt)
         records = res.all()

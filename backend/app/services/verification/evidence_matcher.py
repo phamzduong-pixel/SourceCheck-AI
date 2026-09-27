@@ -7,6 +7,7 @@ or dynamic retrieval), ranking them and preserving full provenance (claim -> evi
 import logging
 import re
 from typing import Dict, List, Optional, Set
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.schemas.search import SearchHit
 from app.schemas.claim import ExtractedClaim
@@ -22,6 +23,13 @@ from app.services.verification.schemas import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def normalize_document_scope(document_ids: Optional[List[UUID]]) -> Optional[Set[str]]:
+    """Normalize an optional document scope for provenance checks."""
+    if document_ids is None:
+        return None
+    return {str(document_id) for document_id in document_ids}
 
 
 STOP_WORDS = {
@@ -72,6 +80,7 @@ class EvidenceMatcher:
         evidence_items: List[EvidenceItem],
         top_k: int = 3,
         min_score: Optional[float] = None,
+        document_ids: Optional[List[UUID]] = None,
     ) -> EvidenceMatchingResponse:
         """Align claims against pre-selected EvidenceItems (e.g. from StructuredContext).
         
@@ -85,8 +94,18 @@ class EvidenceMatcher:
             EvidenceMatchingResponse containing matches, counts, and lookup map.
         """
         threshold = min_score if min_score is not None else self.default_min_score
+        allowed_document_ids = normalize_document_scope(document_ids)
+        scoped_evidence_items = (
+            evidence_items
+            if allowed_document_ids is None
+            else [
+                item
+                for item in evidence_items
+                if item.document_id is not None and item.document_id in allowed_document_ids
+            ]
+        )
 
-        if not claims or not evidence_items:
+        if not claims or not scoped_evidence_items:
             return EvidenceMatchingResponse(
                 total_claims=len(claims) if claims else 0,
                 total_matches=0,
@@ -115,7 +134,7 @@ class EvidenceMatcher:
                     page_number=item.page_number,
                     metadata={"evidence_id": item.evidence_id, **(item.metadata or {})},
                 )
-                for item in evidence_items
+                for item in scoped_evidence_items
             ]
 
             # 2. Score relevance between claim text and candidate evidence texts
@@ -184,6 +203,7 @@ class EvidenceMatcher:
         context: StructuredContext,
         top_k: int = 3,
         min_score: Optional[float] = None,
+        document_ids: Optional[List[UUID]] = None,
     ) -> EvidenceMatchingResponse:
         """Convenience method to match claims directly against a StructuredContext."""
         if not context or not context.evidence_items:
@@ -198,6 +218,7 @@ class EvidenceMatcher:
             evidence_items=context.evidence_items,
             top_k=top_k,
             min_score=min_score,
+            document_ids=document_ids,
         )
 
     async def match_evidence_for_claims(
@@ -205,6 +226,7 @@ class EvidenceMatcher:
         claims: List[ExtractedClaim],
         top_k: int = 5,
         session: Optional[AsyncSession] = None,
+        document_ids: Optional[List[UUID]] = None,
     ) -> Dict[str, List[SearchHit]]:
         """Query retrieval dynamically for claims, searching indexed documents in database."""
         matched: Dict[str, List[SearchHit]] = {}
@@ -213,7 +235,11 @@ class EvidenceMatcher:
             for claim in claims:
                 claim_key = claim.claim_id or claim.claim_text
                 search_res = await self.retrieval_service.search(
-                    query=claim.claim_text, top_k=top_k * 2, rerank=True, session=s
+                    query=claim.claim_text,
+                    top_k=top_k * 2,
+                    rerank=True,
+                    filters={"document_ids": document_ids} if document_ids is not None else None,
+                    session=s,
                 )
                 matched[claim_key] = search_res.hits[:top_k]
 

@@ -318,3 +318,70 @@ Tài liệu đặc tả toàn bộ danh mục tính năng của hệ thống Sou
 ## 16. Tương thích database local và đăng nhập
 
 Các database SQLite fallback được tạo trước khi có trường profile có thể thiếu `avatar_url` hoặc `phone_number`, vì `create_all` không alter bảng hiện hữu. Startup hiện kiểm tra và thêm các cột nullable còn thiếu trước khi truy vấn user. Đây là lớp tương thích local, không thay đổi authentication hoặc verification logic. Migration chính thức cho môi trường có Alembic là `004_add_user_profile_fields`.
+---
+
+## 5.6. Research ChatInput Composer — Checkpoint F1
+
+Research Chat hiện dùng một Research Input Composer thống nhất cho empty state và conversation mode.
+
+### Chức năng người dùng
+
+- Nhập câu hỏi bằng textarea auto-resize.
+- `Enter` gửi request; `Shift+Enter` xuống dòng.
+- Khi đang xử lý, nút Send chuyển thành Stop.
+- Nút `+` mở file picker; hỗ trợ PDF/DOCX/TXT và drag & drop.
+- File chip hiển thị tên, trạng thái upload/processing/ready/error và nút remove.
+- Attachment ready được liên kết với `document_id` của request.
+- Q&A hỗ trợ nhiều tài liệu; Summary yêu cầu đúng một tài liệu ready.
+- Search là corpus retrieval control, không phải web search.
+- Microphone dùng Web Speech API `vi-VN`, transcript không tự submit và có fallback unsupported.
+
+### Request contract
+
+```ts
+{
+  question: string;
+  task_type?: 'qa' | 'summary';
+  search_mode?: 'hybrid' | 'vector' | 'bm25';
+  search_enabled?: boolean;
+  document_ids?: string[];
+  conversation_id?: string | null;
+}
+```
+
+`document_ids` được giữ xuyên suốt retrieval → context → generation → claim verification → citation → output guardrail. Khi không truyền scope, Q&A giữ backward-compatible behavior hiện tại.
+
+### Search behavior
+
+- Bật Search: dùng hybrid Vector + BM25 retrieval hiện có, sau đó RRF/reranking và verification pipeline.
+- Tắt Search: vẫn dùng grounded retrieval theo câu hỏi gốc, nhưng không contextual query rewrite.
+- Không có Google/Bing/web browsing/URL crawler.
+- Scope tài liệu được áp dụng đồng nhất ở Vector Search và BM25.
+
+### Layout behavior
+
+- Empty State căn giữa theo vùng nội dung, không tạo scrollbar khi nội dung chưa vượt viewport.
+- Sau khi gửi câu hỏi, UI chuyển sang conversation layout và sticky composer nằm dưới cùng, cùng trục với khung answer.
+- Toolbar không còn các text control dư như `Operation`, `Giọng nói`, `Gửi`; tooltip/accessibility label vẫn được giữ.
+- Mic nằm ngay cạnh Send; desktop/mobile và Light/Dark mode được hỗ trợ.
+
+### Implementation modules
+
+- `frontend/src/components/chat/ResearchInputComposer.tsx`
+- `frontend/src/pages/ResearchChatPage.tsx`
+- `frontend/src/types/qa.ts`
+- `frontend/src/styles/chat.css`
+- `backend/app/schemas/qa.py`
+- `backend/app/api/routers/questions.py`
+- `backend/app/services/qa/qa_service.py`
+- `backend/app/services/qa/pipeline.py`
+
+### Validation
+
+- Focused ChatInput/scope/Summary tests: pass.
+- Full frontend regression: `17 files / 198 tests passed`.
+- Backend relevant regression: `28 passed`.
+- Frontend production build: pass.
+- `git diff --check`: pass.
+
+F1 không bao gồm URL ingestion, OCR, image analysis, TTS, ownership/workspace hoặc refactor rộng.

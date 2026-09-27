@@ -65,3 +65,29 @@ Luồng demo hiện có thể thực hiện theo chuỗi:
 ## 6. Phạm vi không thay đổi
 
 Các cập nhật trên không thay đổi Claim Extraction, Claim Verifier, evidence matching, citation logic, coverage calculation, RAG/retrieval pipeline, database architecture hoặc LLM provider. Không commit/push trong checkpoint này.
+## 7. Checkpoint F1 — Research ChatInput (hoàn thành)
+
+Cập nhật gần nhất: 28/09/2026.
+
+Research ChatInput đã hoàn thiện focused flow cho Q&A/Summary document-grounded:
+
+- Composer compact/expanded theo trạng thái initial, focus, typing, attachment, recording và submitting.
+- Attachment PDF/DOCX/TXT qua file picker và drag & drop; hiển thị chip, trạng thái upload/processing/ready/error, remove và document scope.
+- Q&A hỗ trợ một hoặc nhiều `document_ids`; Summary bắt buộc đúng một document đã upload và xử lý xong.
+- Search control dùng retrieval hiện có, giữ hybrid retrieval và tôn trọng `document_ids`; không triển khai web search.
+- Search state được truyền qua request bằng `search_enabled`; khi tắt vẫn giữ grounded retrieval với câu hỏi gốc và bỏ contextual query rewrite để bảo toàn backward compatibility.
+- Microphone dùng Web Speech API, ưu tiên `vi-VN`; transcript chỉ đưa vào textarea, không tự động submit; có fallback khi browser không hỗ trợ.
+- Enter gửi, Shift+Enter xuống dòng; khi đang xử lý Send chuyển thành Stop.
+- Toolbar giữ icon SVG hiện tại, mic nằm cạnh Send, không còn text thừa như Operation/Giọng nói/Gửi.
+- Empty State được căn giữa vùng nội dung theo chiều ngang/dọc, không tạo scrollbar khi chưa có conversation; sau khi gửi tự chuyển sang conversation layout với composer sticky căn theo answer column.
+- Hỗ trợ responsive desktop/mobile và Light/Dark mode.
+
+### Validation F1
+
+- Focused frontend ChatInput/scope/Summary tests: pass.
+- Full frontend regression: 17 test files, 198 tests pass.
+- Backend retrieval/document-scope/verification/summary regression: 28 tests pass.
+- Frontend production build: pass.
+- `git diff --check`: pass.
+
+Các thay đổi F1 không triển khai URL ingestion, OCR, image analysis, TTS, ownership/workspace hoặc refactor kiến trúc. Chưa commit/push.

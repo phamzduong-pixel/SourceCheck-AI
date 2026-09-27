@@ -96,6 +96,7 @@ class DocumentRepository(BaseRepository[Document]):
         top_k: int = 5,
         score_threshold: Optional[float] = None,
         document_id: Optional[UUID] = None,
+        document_ids: Optional[List[UUID]] = None,
     ) -> List[Tuple[DocumentChunk, Document, Optional[Source], float]]:
         """Search top-k most similar document chunks using vector cosine distance.
         
@@ -116,8 +117,9 @@ class DocumentRepository(BaseRepository[Document]):
                 .outerjoin(Source, Document.source_id == Source.id)
                 .where(DocumentChunk.embedding.is_not(None))
             )
-            if document_id:
-                stmt = stmt.where(DocumentChunk.document_id == document_id)
+            scoped_document_ids = document_ids if document_ids is not None else ([document_id] if document_id else None)
+            if scoped_document_ids is not None:
+                stmt = stmt.where(DocumentChunk.document_id.in_(scoped_document_ids))
 
             res = await self.session.execute(stmt)
             rows = res.all()
@@ -161,8 +163,9 @@ class DocumentRepository(BaseRepository[Document]):
             .outerjoin(Source, Document.source_id == Source.id)
             .where(DocumentChunk.embedding.is_not(None))
         )
-        if document_id:
-            stmt = stmt.where(DocumentChunk.document_id == document_id)
+        scoped_document_ids = document_ids if document_ids is not None else ([document_id] if document_id else None)
+        if scoped_document_ids is not None:
+            stmt = stmt.where(DocumentChunk.document_id.in_(scoped_document_ids))
         if score_threshold is not None:
             stmt = stmt.where((1.0 - distance) >= score_threshold)
 

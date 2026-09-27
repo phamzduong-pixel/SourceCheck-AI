@@ -278,23 +278,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
             </div>
 
             <div className="menu-divider" />
-            <button
-              type="button"
-              className="menu-profile-btn"
-              onClick={() => {
-                setIsMenuOpen(false);
-                navigate('/profile');
-              }}
-              data-testid="profile-open-btn"
-              role="menuitem"
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <circle cx="12" cy="8" r="3" />
-                <path d="M5 20a7 7 0 0 1 14 0" />
-              </svg>
-              <span>{t('settings.profileAction')}</span>
-            </button>
-            <div className="menu-divider" />
 
             {/* Language & Theme Preferences inside User Menu */}
             <div className="menu-section-label">{t('settings.title')}</div>
@@ -338,6 +321,25 @@ export const Sidebar: React.FC<SidebarProps> = ({
                 <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.88l.06.06-1.7 1.7-.06-.06a1.7 1.7 0 0 0-1.88-.34 1.7 1.7 0 0 0-1.03 1.56V20h-2.4v-.2a1.7 1.7 0 0 0-1.03-1.56 1.7 1.7 0 0 0-1.88.34l-.06.06-1.7-1.7.06-.06A1.7 1.7 0 0 0 8.4 15a1.7 1.7 0 0 0-1.56-1.03H6v-2.4h.84A1.7 1.7 0 0 0 8.4 10a1.7 1.7 0 0 0-.34-1.88L8 8.06l1.7-1.7.06.06A1.7 1.7 0 0 0 11.64 6.1 1.7 1.7 0 0 0 12.67 4.5V4h2.4v.5A1.7 1.7 0 0 0 16.1 6.1a1.7 1.7 0 0 0 1.88-.34l.06-.06 1.7 1.7-.06.06A1.7 1.7 0 0 0 19.4 10a1.7 1.7 0 0 0 1.56 1.03h.04v2.4h-.04A1.7 1.7 0 0 0 19.4 15Z" />
               </svg>
               <span>{t('settings.title')}</span>
+            </button>
+
+            <div className="menu-divider" />
+
+            <button
+              type="button"
+              className="menu-profile-btn"
+              onClick={() => {
+                setIsMenuOpen(false);
+                navigate('/profile');
+              }}
+              data-testid="profile-open-btn"
+              role="menuitem"
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="12" cy="8" r="3" />
+                <path d="M5 20a7 7 0 0 1 14 0" />
+              </svg>
+              <span>{t('settings.profileAction')}</span>
             </button>
 
             <div className="menu-divider" />

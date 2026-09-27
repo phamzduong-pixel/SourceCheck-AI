@@ -1,6 +1,7 @@
 """High-level retrieval service facade orchestrating search, reranking, and context construction."""
 
 from typing import Any, Dict, List, Optional
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.config import settings
 from app.schemas.search import SearchHit, SearchResponse
@@ -62,6 +63,7 @@ class RetrievalService:
             filters: Optional metadata filters.
             session: Active database session.
         """
+        filters = self._normalize_filters(filters)
         mode = search_mode.lower()
         # If rerank is enabled, fetch more candidate passages for reranker to evaluate
         fetch_k = top_k * 2 if rerank else top_k
@@ -151,6 +153,7 @@ class RetrievalService:
         query: str = "",
         max_evidence: Optional[int] = None,
         max_tokens: Optional[int] = None,
+        document_ids: Optional[List[UUID]] = None,
     ) -> StructuredContext:
         """Filter/deduplicate candidate hits and build a structured, traceable context for generation."""
         selected_hits = self.evidence_selector.select_evidence(hits=hits, max_evidence=max_evidence)
@@ -158,5 +161,29 @@ class RetrievalService:
             query=query,
             evidence_hits=selected_hits,
             max_tokens=max_tokens,
+            document_ids=document_ids,
         )
+
+    @staticmethod
+    def _normalize_filters(filters: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        """Normalize legacy document_id and new document_ids filters to UUID lists."""
+        if filters is None:
+            return None
+
+        normalized = dict(filters)
+        raw_document_ids = normalized.get("document_ids")
+        if raw_document_ids is None and "document_id" in normalized:
+            raw_document_ids = normalized["document_id"]
+
+        if raw_document_ids is None:
+            return normalized
+        if isinstance(raw_document_ids, (str, UUID)):
+            raw_document_ids = [raw_document_ids]
+
+        try:
+            normalized["document_ids"] = [UUID(str(document_id)) for document_id in raw_document_ids]
+        except (TypeError, ValueError) as exc:
+            raise ValueError("document_ids must contain valid UUID values") from exc
+        normalized.pop("document_id", None)
+        return normalized
 

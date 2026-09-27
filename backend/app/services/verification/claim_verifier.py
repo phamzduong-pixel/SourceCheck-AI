@@ -3,6 +3,7 @@
 import logging
 import re
 from typing import List, Optional, Set
+from uuid import UUID
 from app.core.exceptions import LLMProviderException
 from app.schemas.claim import ExtractedClaim
 from app.schemas.search import SearchHit
@@ -20,7 +21,10 @@ from app.services.verification.schemas import (
     MatchedEvidenceCandidate,
     VerificationVerdict,
 )
-from app.services.verification.evidence_matcher import _compute_token_overlap
+from app.services.verification.evidence_matcher import (
+    _compute_token_overlap,
+    normalize_document_scope,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -165,8 +169,18 @@ class ClaimVerifier:
         self,
         claim: ClaimItem,
         candidates: List[MatchedEvidenceCandidate],
+        document_ids: Optional[List[UUID]] = None,
     ) -> ClaimVerificationResult:
         """Verify an atomic ClaimItem against its matched candidate evidence passages."""
+        allowed_document_ids = normalize_document_scope(document_ids)
+        if allowed_document_ids is not None:
+            candidates = [
+                candidate
+                for candidate in candidates
+                if candidate.document_id is not None
+                and candidate.document_id in allowed_document_ids
+            ]
+
         # 1. Fast-path: If no candidates provided
         if not candidates:
             return ClaimVerificationResult(
@@ -246,6 +260,7 @@ class ClaimVerifier:
     async def verify_matches_batch(
         self,
         matches: List[ClaimEvidenceMatch],
+        document_ids: Optional[List[UUID]] = None,
     ) -> List[ClaimVerificationResult]:
         """Verify multiple claim matches in sequence."""
         results: List[ClaimVerificationResult] = []
@@ -255,14 +270,29 @@ class ClaimVerifier:
                 text=match.claim_text,
                 order=len(results) + 1,
             )
-            res = await self.verify_claim_match(claim, match.matched_evidences)
+            res = await self.verify_claim_match(
+                claim,
+                match.matched_evidences,
+                document_ids=document_ids,
+            )
             results.append(res)
         return results
 
     async def verify_claim(
-        self, claim: ExtractedClaim, evidence_hits: List[SearchHit]
+        self,
+        claim: ExtractedClaim,
+        evidence_hits: List[SearchHit],
+        document_ids: Optional[List[UUID]] = None,
     ) -> VerifiedClaimItem:
         """Backward-compatible method for legacy verification endpoints."""
+        allowed_document_ids = normalize_document_scope(document_ids)
+        if allowed_document_ids is not None:
+            evidence_hits = [
+                hit
+                for hit in evidence_hits
+                if hit.document_id is not None and hit.document_id in allowed_document_ids
+            ]
+
         if not evidence_hits:
             return VerifiedClaimItem(
                 claim_id=claim.claim_id,

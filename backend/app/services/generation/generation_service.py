@@ -9,6 +9,8 @@ from app.services.generation.llm_provider import get_llm_provider
 from app.services.generation.prompt_templates import (
     GROUNDED_QA_SYSTEM_PROMPT,
     render_grounded_qa_prompt,
+    GROUNDED_SUMMARY_SYSTEM_PROMPT,
+    render_grounded_summary_prompt,
 )
 from app.services.generation.schemas import (
     GeneratedAnswer,
@@ -129,4 +131,84 @@ class GenerationService:
                 status=GenerationStatus.INSUFFICIENT_EVIDENCE,
                 evidence_ids=[],
                 metadata={"error": str(e)},
+            )
+
+    async def generate_summary(
+        self,
+        question: str,
+        context: Optional[StructuredContext] = None,
+        temperature: float = settings.LLM_TEMPERATURE,
+        max_tokens: Optional[int] = settings.LLM_MAX_OUTPUT_TOKENS,
+    ) -> GenerationResponse:
+        """Generate one bounded summary batch strictly from its evidence context."""
+        if not question or not question.strip():
+            return GenerationResponse(
+                question=question,
+                answer="Empty summary request.",
+                status=GenerationStatus.INSUFFICIENT_EVIDENCE,
+                evidence_ids=[],
+                metadata={"reason": "empty_question"},
+            )
+
+        if not context or context.total_evidence == 0 or not context.evidence_items:
+            return GenerationResponse(
+                question=question,
+                answer="The selected document does not contain enough evidence to summarize.",
+                status=GenerationStatus.INSUFFICIENT_EVIDENCE,
+                evidence_ids=[],
+                metadata={"reason": "no_evidence_available"},
+            )
+
+        user_prompt = render_grounded_summary_prompt(
+            question=question,
+            evidence_context=context.context_text,
+        )
+        valid_evidence_ids: Set[str] = set(context.evidence_map.keys())
+
+        try:
+            generated: GeneratedAnswer = await self.provider.generate_structured(
+                prompt=user_prompt,
+                schema=GeneratedAnswer,
+                system_prompt=GROUNDED_SUMMARY_SYSTEM_PROMPT,
+                temperature=temperature,
+                max_tokens=max_tokens,
+            )
+            sanitized_ids = [
+                evidence_id
+                for evidence_id in generated.evidence_ids
+                if evidence_id in valid_evidence_ids
+            ]
+            status = generated.status
+            if status == GenerationStatus.SUPPORTED and not sanitized_ids:
+                status = GenerationStatus.INSUFFICIENT_EVIDENCE
+
+            return GenerationResponse(
+                question=question,
+                answer=generated.answer,
+                status=status,
+                evidence_ids=sanitized_ids,
+                model_name=getattr(self.provider, "model", getattr(self.provider, "model_name", "unknown")),
+                metadata={
+                    "total_evidence_available": context.total_evidence,
+                    "raw_evidence_ids": generated.evidence_ids,
+                    "task_type": "summary",
+                },
+            )
+        except LLMProviderException as e:
+            logger.error(f"LLM Provider error during summary generation: {e.message}")
+            return GenerationResponse(
+                question=question,
+                answer="The summary model could not complete this evidence-grounded batch.",
+                status=GenerationStatus.INSUFFICIENT_EVIDENCE,
+                evidence_ids=[],
+                metadata={"error": e.message, "error_code": e.code, "task_type": "summary"},
+            )
+        except Exception as e:
+            logger.exception(f"Unexpected error during summary generation: {str(e)}")
+            return GenerationResponse(
+                question=question,
+                answer="The summary could not be completed from the selected document evidence.",
+                status=GenerationStatus.INSUFFICIENT_EVIDENCE,
+                evidence_ids=[],
+                metadata={"error": str(e), "task_type": "summary"},
             )

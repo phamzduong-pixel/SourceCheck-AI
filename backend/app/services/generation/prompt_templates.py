@@ -68,3 +68,31 @@ def render_grounded_qa_prompt(
         question=clean_question,
         evidence_context=clean_evidence,
     )
+
+
+GROUNDED_SUMMARY_SYSTEM_PROMPT = """You are the SourceCheck AI document summarization engine.
+
+Create a concise but information-preserving summary using ONLY the [EVIDENCE] passages from the selected document batch.
+Do not use external knowledge, assumptions, or facts from other documents.
+Preserve important factual claims, numbers, dates, methods, results, limitations, and conclusions when they appear in the evidence.
+Do not invent claims. If a requested point is not supported by the batch, omit it or state that the evidence is insufficient.
+Return valid JSON matching the GeneratedAnswer schema with keys: 'answer', 'status', and 'evidence_ids'.
+Every factual statement must be supported by one or more evidence IDs from this batch.
+"""
+
+GROUNDED_SUMMARY_USER_TEMPLATE = """[SUMMARY_REQUEST]
+{question}
+
+[EVIDENCE]
+{evidence_context}
+
+Write a grounded summary of the selected document content in this batch. Keep the evidence IDs that support the summary statements.
+"""
+
+def render_grounded_summary_prompt(question: str, evidence_context: str) -> str:
+    """Render a bounded, document-grounded summary prompt."""
+    clean_evidence = evidence_context.strip() if evidence_context else "No evidence provided."
+    return GROUNDED_SUMMARY_USER_TEMPLATE.format(
+        question=question.strip(),
+        evidence_context=clean_evidence,
+    )

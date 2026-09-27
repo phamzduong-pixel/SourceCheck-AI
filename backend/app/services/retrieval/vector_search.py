@@ -69,20 +69,21 @@ class PgVectorRetriever(BaseVectorRetriever):
 
         repo = DocumentRepository(session) if session else self.repository
 
-        # Optional document_id filter
-        doc_id = None
-        if filters and "document_id" in filters:
+        # Optional document scope. An explicitly empty list must return no hits,
+        # rather than silently widening to the global corpus.
+        document_ids = None
+        if filters and "document_ids" in filters:
             try:
-                doc_id = UUID(str(filters["document_id"]))
-            except (ValueError, TypeError):
-                pass
+                document_ids = [UUID(str(document_id)) for document_id in filters["document_ids"]]
+            except (ValueError, TypeError) as exc:
+                raise ValidationException("document_ids must contain valid UUID values") from exc
 
         min_score = score_threshold if score_threshold is not None else settings.VECTOR_SIMILARITY_THRESHOLD
         results = await repo.search_vector(
             query_vector=query_vector,
             top_k=top_k,
             score_threshold=min_score if min_score > 0.0 else None,
-            document_id=doc_id,
+            document_ids=document_ids,
         )
 
         hits: List[SearchHit] = []
